@@ -1,5 +1,0 @@
-library(readxl)
-
-path <- "data/Amazonia_Burnt_area_2000-2019_DRL02Feb20_MR.xlsx"
-excel_sheets(path)
-data <- read_excel(path, sheet = "data_by_Biome-monthly")

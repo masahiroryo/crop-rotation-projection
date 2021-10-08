@@ -1,1 +1,5 @@
 *.csv
+.Rhistory
+.Rproj.user/
+literature/
+.obsidian/
