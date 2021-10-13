@@ -1,143 +1,116 @@
-# load packages -------------------------------------------------------------------------------
 
 library(data.table)
-library(dtplyr)
-library(dplyr, warn.conflicts = FALSE)
+library(tidyverse)
+library(reshape)
+library(reshape2)
 
-# read crop data ------------------------------------------------------------------------------
-
-data_ref <- fread("./data/ref.csv", sep =",", header = T)
-data_crop_raw <- fread("./data/crop.csv", sep=",", header = T)
-
-data_ref$x_coord <- round(data_ref$x_coord)
-data_ref$y_coord <- round(data_ref$y_coord)
-data_crop_raw$x_coord <- round(data_crop_raw$x_coord)
-data_crop_raw$y_coord <-round(data_crop_raw$y_coord)
-
-data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord")) %>% 
-  select(-c("state")) %>% 
-  as.data.table()
-
-rm(data_crop_raw,data_ref)
-gc()
-
-resh_crop <- melt(data_crop, id = c("FID", "State", "OBJECTID", "cell_id", "x_coord", "y_coord"))
-names(resh_crop) <- c("FID", "State", "OBJECTID", "cell_id", "x_coord", "y_coord", "Year", "crtype")
-resh_crop$crtype <- replace(resh_crop$crtype, resh_crop$crtype == 8, 4)
-resh_crop$crtype <- replace(resh_crop$crtype, resh_crop$crtype == 2, 1)
-resh_crop$crtype <- replace(resh_crop$crtype, resh_crop$crtype == 14, 13)
-
-# read climate data ---------------------------------------------------------------------------
-
-# temperature
-data_temp <- fread("./data/temp.csv", sep=",", header = T)
-temp <- data.frame("cell_id"=data_temp$cell_id)
-
-i <- 5
-j <- 4
-
-for (i in 5:20){
-  temp[paste(i,"tAVG",sep="")] <- data.frame(rowMeans(data_temp[,j:(j+5)]/10)) #March to August
-  temp[paste(i,"tAM",sep="")] <- data.frame(rowMeans(data_temp[,(j+1):(j+2)]/10)) #April to May
-  temp[paste(i,"tJJ",sep="")] <- data.frame(rowMeans(data_temp[,(j+3):(j+4)]/10)) #June to July
-  j <- j+12
+start_time <- Sys.time()
+print("starting process ...")
+#preProcessing <- function(mainPath, fedState, n)
+#{
+### Sort Function
+sort.data.frame <- function(x, decreasing=FALSE, by=1, ... ){
+  f <- function(...) order(...,decreasing=decreasing)
+  i <- do.call(f,x[by])
+  x[i,,drop=FALSE]
 }
 
-data_temp <- inner_join(temp, data_crop, by = c("cell_id")) %>% 
-  filter(OBJECTID > 0) %>% 
-  select(1:50) %>% 
-  as.data.table()
+### Paths and file names ###
 
-rm(temp,i,j)
-gc()
+mainPath <- "/home/pietn/Master/thesis"
 
-resh_temp <- melt(data_temp[,c(1,2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50)], id = c("cell_id", "OBJECTID"))
-resh_temp2 <- melt(data_temp[,c(1,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,50)], id = c("cell_id", "OBJECTID"))
-resh_temp3 <- melt(data_temp[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], id = c("cell_id", "OBJECTID"))
-resh_temp <- full_join(resh_temp,resh_temp2, by=c("cell_id","OBJECTID"))
-resh_temp <- as.data.frame(full_join(resh_temp,resh_temp3, by=c("cell_id","OBJECTID")))
+crop <- "crop.csv"
+temp <- "temp.csv"
+prec <- "prec.csv"
+rad <- "rad.csv"
+ref <- "ref.csv"
+soil <- "soil.csv"
 
-resh_temp <- resh_temp[,-c(5:7,9:11)]
-names(resh_temp) <- c("cell_id", "OBJECTID", "Year", "TempAVG", "TempAM", "TempJJ")
+# Amount of samples and seed
 
+n=1000
+sd=1
 
+### Extract data, check for NAs the class of each variable, and pre-process each variable ###
 
-# precipitation 
-data_prec <- fread("./data/prec.csv", sep=",", header = T)
-temp <- data.frame("cell_id"=data_prec$cell_id)
+## Reference File #######################################
+setwd(paste(mainPath,"/data", sep = ""))
+dataRef <- fread(ref, sep = ",", header = T)
+dataRef$x_coord <- as.character(round(dataRef$x_coord))
+dataRef$y_coord <- as.character(round(dataRef$y_coord))
 
-i <- 5
-j <- 4
+#Select n amount of samples from crop and find their corresponding OBJECTID and cell_id from ref
+set.seed(seed = sd)
+#sampleDE_ref <- sample_n(dataRef, n, replace = F)
 
-for (i in 5:20){
-  temp[paste(i,"tAVG",sep="")] <- data.frame(rowMeans(data_prec[,j:(j+5)]/10)) #March to August
-  temp[paste(i,"tAM",sep="")] <- data.frame(rowMeans(data_prec[,(j+1):(j+2)]/10)) #April to May
-  temp[paste(i,"tJJ",sep="")] <- data.frame(rowMeans(data_prec[,(j+3):(j+4)]/10)) #June to July
-  j <- j+12
+## Crop Data ############################################
+print("starting crop data ...")
+#Read
+setwd(paste(mainPath,"/data", sep = ""))
+dataCrop <- fread(crop, sep=",", header = T)
+dataCrop$x_coord <- as.character(round(dataCrop$x_coord))
+dataCrop$y_coord <- as.character(round(dataCrop$y_coord))
+
+#which(is.na(dataCrop))
+#sapply(dataCrop,class)
+
+#Find the corresponding OBJECTID and cell_id from ref
+crspd <- Reduce(function(...) merge(..., all = TRUE, by = c("x_coord", "y_coord")), list(dataRef, dataCrop))
+#crspd2 <- merge(dataRef, dataCrop,all = TRUE, by = c("x_coord", "y_coord"))
+crspd <- crspd[,-c(4)]
+
+idx1 <- which(crspd$OBJECTID > 0)
+#idx2 <- na.omit(unique(crspd$OBJECTID)) # Check for duplicates and erase them
+idx2 <- which(duplicated(crspd$OBJECTID[idx1])) # Check for duplicates and erase them
+
+if (length(idx2) == 0) {
+  sampleDE_crop <- crspd[idx1]
+} else {
+  sampleDE_crop <- crspd[idx1]
+  sampleDE_crop <- sampleDE_crop[-c(idx2[c(2:5)]),]
 }
 
-data_prec <- inner_join(temp, data_crop, by = c("cell_id")) %>% 
-  filter(OBJECTID > 0) %>% 
-  select(1:50) %>% 
-  as.data.table()
+sampleDE_crop <- sampleDE_crop[order(sampleDE_crop$OBJECTID,)]
+dataRef <- dataRef[order(dataRef$OBJECTID,)]
 
-rm(temp,i,j)
+# test_crop <- which(sampleDE_crop$OBJECTID==dataRef$OBJECTID) # should be from 1 to n
+
+#Reshape and replace crop codes according to price ! To be updated @prices !
+
+resh.crop <- melt(sampleDE_crop, id = c("FID", "State", "OBJECTID", "cell_id", "x_coord", "y_coord"))
+names(resh.crop) <- c("FID", "State", "OBJECTID", "cell_id", "x_coord", "y_coord", "Year", "crtype")
+resh.crop$crtype <- replace(resh.crop$crtype, resh.crop$crtype == 8, 4)
+resh.crop$crtype <- replace(resh.crop$crtype, resh.crop$crtype == 2, 1)
+resh.crop$crtype <- replace(resh.crop$crtype, resh.crop$crtype == 14, 13)
+
+crop_data_time <- Sys.time()
+print("-----------------------------")
+print("finished Crop Data processing")
+print(crop_data_time-start_time)
+
+rm(dataCrop, crspd, sampleDE_crop)
 gc()
 
-resh_prec <- melt(data_prec[,c(1,2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50)], id = c("cell_id", "OBJECTID"))
-resh_prec[,5:8] <- melt(data_prec[,c(1,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,50)], id = c("cell_id", "OBJECTID"))
-resh_prec[,9:12] <- melt(data_prec[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], id = c("cell_id", "OBJECTID"))
-resh_prec <- resh_prec[,-c(5:7,9:11)]
-names(resh_prec) <- c("cell_id", "OBJECTID", "Year", "PrecAVG", "PrecAM", "PrecJJ")
+## Soil data ##############################################
+print("starting soil data ...")
+#Read 
 
-# radiation 
-data_rad <- fread("./data/rad.csv", sep=",", header = T)
+setwd(paste(mainPath,"/data", sep = ""))
+dataSoil <- fread(soil, sep=",", header = T)
+#which(is.na(dataSoil))
+#sapply(dataSoil,class)
+#dataSoil <- dataSoil[order(dataSoil$x_coord),]
+dataSoil$x_coord <- as.character(round(dataSoil$x_coord))
+dataSoil$y_coord <- as.character(round(dataSoil$y_coord))
 
-temp <- data.frame("cell_id"=data_rad$cell_id)
+#dataRef_DE <- dataRef_DE[order(dataRef_DE$x_coord),]
 
-i <- 5
-j <- 4
-
-for (i in 5:20){
-  temp[paste(i,"tAVG",sep="")] <- data.frame(rowMeans(data_rad[,j:(j+5)]/10)) #March to August
-  temp[paste(i,"tAM",sep="")] <- data.frame(rowMeans(data_rad[,(j+1):(j+2)]/10)) #April to May
-  temp[paste(i,"tJJ",sep="")] <- data.frame(rowMeans(data_rad[,(j+3):(j+4)]/10)) #June to July
-  j <- j+12
-}
-
-data_rad <- inner_join(temp, data_crop, by = c("cell_id")) %>% 
-  filter(OBJECTID > 0) %>% 
-  select(1:50) %>% 
-  as.data.table()
-
-rm(temp,i,j)
-gc()
-
-resh_rad <- melt(data_rad[,c(1,2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50)], id = c("cell_id", "OBJECTID"))
-resh_rad[,5:8] <- melt(data_rad[,c(1,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,50)], id = c("cell_id", "OBJECTID"))
-resh_rad[,9:12] <- melt(data_rad[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], id = c("cell_id", "OBJECTID"))
-
-resh_rad <- resh_rad[,-c(5:7,9:11)]
-
-names(resh_rad) <- c("cell_id", "OBJECTID", "Year", "RadAVG", "RadAM", "RadJJ")
-
-# soil data
-
-data_soil <- fread("./data/soil.csv", sep=",", header = T)
-
-data_soil$x_coord <- round(data_soil$x_coord)
-data_soil$y_coord <- round(data_soil$y_coord)
-# soil Type
-
+#Soil Type -----------------------------------------------
 #Find the corresponding x and y coordinates from crop
+crspd <- Reduce(function(...) merge(..., all = TRUE, by = c("x_coord", "y_coord")), list(resh.crop,dataSoil))
+crspd <- crspd[,-c(6:8,10)]
 
-test <- inner_join(data_crop, data_soil, by = c("cell_id")) %>% 
-  filter(OBJECTID > 0) %>% 
-  distinct(OBJECTID, .keep_all = TRUE) %>% 
-  select(6:8,10) %>% 
-  as.data.table()
-
-
+#idx1 <- which(crspd$OBJECTID.x > 0)
 idx4 <- na.omit(unique(crspd$OBJECTID.x)) # Check for duplicates and erase them
 #idx3 <- which(duplicated(crspd$OBJECTID.x[idx1])) # Check for duplicates and erase them
 
@@ -149,3 +122,229 @@ if (length(idx4) == 0) {
   resh.stype <- crspd[idx3,]
   #resh.stype <- resh.stype[-c(idx4),]
 }
+
+resh.stype <- sort(resh.stype, by="OBJECTID.x")
+resh.crop <- sort(resh.crop, by="OBJECTID")
+
+# test_stype <- which(resh.stype$OBJECTID.x==resh.crop$OBJECTID) # should be from 1 to n x 16
+
+#Erase workspace, and perform garbage collection
+rm(crspd, dataSoil, idx4, idx3, resh.stype, resh.crop)
+gc()
+
+
+## Climate Data #########################################
+print("starting climate data ...")
+#Temperature --------------------------------------------
+print("starting temperature data ...")
+setwd(paste(mainPath,"/data", sep = ""))
+
+dataTemp <- fread(temp, sep=",", header = T)
+dataTemp1 <- data.frame("cell_id"=dataTemp$cell_id)
+
+i <- 5
+j <- 4
+
+for (i in 5:20){
+  dataTemp1[paste(i,"tAVG",sep="")] <- data.frame(apply(dataTemp[,j:(j+5)]/10, 1, mean)) #March to August
+  dataTemp1[paste(i,"tAM",sep="")] <- data.frame(apply(dataTemp[,(j+1):(j+2)]/10, 1, mean)) #April to May
+  dataTemp1[paste(i,"tJJ",sep="")] <- data.frame(apply(dataTemp[,(j+3):(j+4)]/10, 1, mean)) #June to July
+  j <- j+12
+}
+
+dataTemp <- dataTemp1
+
+#Erase workspace, and perform garbage collection
+rm(dataTemp1)
+gc()
+
+#Find the corresponding OBJECTID and cell_id from ref
+
+crspd <- Reduce(function(...) merge(..., all = TRUE, by = c("cell_id")), list(dataTemp, dataRef))
+idx <- which(crspd$OBJECTID > 0)
+
+sampleDE_temp <- crspd[idx,1:50]
+sampleDE_temp <- sort(sampleDE_temp, by="cell_id")
+#sampleDE_ref <- sampleDE_ref[order(sampleDE_ref$cell_id,)]
+
+#test_temp <- which(sampleDE_temp$cell_id==sampleDE_ref$cell_id) # should be from 1 to n
+
+#Reshape
+
+resh.temp <- melt(sampleDE_temp[,c(1,2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50)], id = c("cell_id", "OBJECTID"))
+resh.temp[,5:8] <- melt(sampleDE_temp[,c(1,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,50)], id = c("cell_id", "OBJECTID"))
+resh.temp[,9:12] <- melt(sampleDE_temp[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], id = c("cell_id", "OBJECTID"))
+
+resh.temp <- resh.temp[,-c(5:7,9:11)]
+
+names(resh.temp) <- c("cell_id", "OBJECTID", "Year", "TempAVG", "TempAM", "TempJJ")
+
+#Erase workspace, and perform garbage collection
+rm(dataTemp, crspd, sampleDE_temp, resh.temp)
+gc()
+print("finished")
+#Precipitation ------------------------------------------
+print("starting precipitation data ...")
+
+setwd(paste(mainPath,"/data", sep = ""))
+dataPrec <- fread(prec, sep=",", header = T)
+
+dataPrec1 <- data.frame("cell_id"=dataPrec$cell_id)
+
+i <- 5
+j <- 4
+
+for (i in 5:20){
+  dataPrec1[paste(i,"pAVG",sep="")] <- data.frame(apply(dataPrec[,j:(j+5)]/10, 1, sum)) #March to August
+  dataPrec1[paste(i,"pAM",sep="")] <- data.frame(apply(dataPrec[,(j+1):(j+2)]/10, 1, sum)) #April to May
+  dataPrec1[paste(i,"pJJ",sep="")] <- data.frame(apply(dataPrec[,(j+3):(j+4)]/10, 1, sum)) #June to July
+  j <- j+12
+}
+
+dataPrec <- dataPrec1
+rm(dataPrec1)
+gc()
+#Find the corresponding OBJECTID and cell_id from ref
+
+crspd <- Reduce(function(...) merge(..., all = TRUE, by = c("cell_id")), list(dataPrec, dataRef))
+idx <- which(crspd$OBJECTID > 0)
+
+sampleDE_prec <- crspd[idx,1:50]
+sampleDE_prec <- sort(sampleDE_prec, by="cell_id")
+#sampleDE_ref <- sampleDE_ref[order(sampleDE_ref$cell_id,)]
+
+#test_prec <- which(sampleDE_prec$cell_id==sampleDE_ref$cell_id) # should be from 1 to n
+
+#Reshape
+
+resh.prec <- melt(sampleDE_prec[,c(1,2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50)], id = c("cell_id", "OBJECTID"))
+resh.prec[,5:8] <- melt(sampleDE_prec[,c(1,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,50)], id = c("cell_id", "OBJECTID"))
+resh.prec[,9:12] <- melt(sampleDE_prec[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], id = c("cell_id", "OBJECTID"))
+
+resh.prec <- resh.prec[,-c(5:7,9:11)]
+
+names(resh.prec) <- c("cell_id", "OBJECTID", "Year", "PrecAVG", "PrecAM", "PrecJJ")
+
+#Erase workspace, and perform garbage collection
+rm(dataPrec, crspd, sampleDE_prec, resh.prec)
+gc()
+print("finished")
+#Radiation ----------------------------------------------
+print("starting radiation data ...")
+
+setwd(paste(mainPath,"/data", sep = ""))
+dataRad <- fread(rad, sep=",", header = T)
+
+dataRad1 <- data.frame("cell_id"=dataRad$cell_id)
+
+i <- 5
+j <- 4
+
+for (i in 5:20){
+  dataRad1[paste(i,"rAVG",sep="")] <- data.frame(apply(dataRad[,j:(j+5)]/10, 1, mean)) #March to August
+  dataRad1[paste(i,"rAM",sep="")] <- data.frame(apply(dataRad[,(j+1):(j+2)]/10, 1, mean)) #April to May
+  dataRad1[paste(i,"rJJ",sep="")] <- data.frame(apply(dataRad[,(j+3):(j+4)]/10, 1, mean)) #June to July
+  j <- j+12
+}
+
+dataRad <- dataRad1
+rm(dataRad1)
+gc()
+#Find the corresponding OBJECTID and cell_id from ref
+
+crspd <- Reduce(function(...) merge(..., all = TRUE, by = c("cell_id")), list(dataRad, dataRef))
+idx <- which(crspd$OBJECTID > 0)
+
+sampleDE_rad <- crspd[idx,1:50]
+sampleDE_rad <- sort(sampleDE_rad, by="cell_id")
+# sampleDE_ref <- sampleDE_ref[order(sampleDE_ref$cell_id,)]
+
+# test_rad <- which(sampleDE_rad$cell_id==sampleDE_ref$cell_id) # should be from 1 to n
+
+#Reshape
+
+resh.rad <- melt(sampleDE_rad[,c(1,2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50)], id = c("cell_id", "OBJECTID"))
+resh.rad[,5:8] <- melt(sampleDE_rad[,c(1,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,50)], id = c("cell_id", "OBJECTID"))
+resh.rad[,9:12] <- melt(sampleDE_rad[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], id = c("cell_id", "OBJECTID"))
+
+resh.rad <- resh.rad[,-c(5:7,9:11)]
+
+names(resh.rad) <- c("cell_id", "OBJECTID", "Year", "RadAVG", "RadAM", "RadJJ")
+
+#Erase workspace, and perform garbage collection
+rm(dataRad, crspd, sampleDE_rad, resh.rad)
+gc()
+
+################### Create the data formatting used by the crop rotation  ###################
+
+## Order them so that the values match ! ##
+# resh.stype <- sort(resh.stype, by="OBJECTID.x")
+# resh.crop <- sort(resh.crop, by="OBJECTID")
+# resh.prec <- sort(resh.prec, by="OBJECTID")
+# resh.rad <- sort(resh.rad, by="OBJECTID")
+# resh.temp <- sort(resh.temp, by="OBJECTID")
+# 
+# identical(resh.crop$OBJECTID, resh.stype$OBJECTID.x)
+# identical(resh.crop$OBJECTID, resh.prec$OBJECTID)
+# identical(resh.crop$OBJECTID, resh.temp$OBJECTID)
+# identical(resh.crop$OBJECTID, resh.rad$OBJECTID)
+print("finished")
+## Price ------------------------------------------------- Needs to be updated!
+# print("starting price data ...")
+# #setwd(paste(mainPath,"/OrigData", sep = ""))
+# #dataPrice <- fread("price.csv", sep = ",", header = T)
+# #dataPrice <- dataPrice[367:549,c("Year", "Item", "Value","Element")]
+# 
+# #cropsPrice <- unique(dataPrice$Item)
+# #cropsCrop <- c("4", "17", "1", "9", "16", "12", "10", "5", "11", "6", "3", "13", "0", "15")
+# #crops <- data.frame(cropsPrice, cropsCrop)
+# #dataPrice$crtype <- crops$cropsCrop[match(dataPrice$Item, cropsPrice)]
+# #dataPrice$crtype <- as.numeric(dataPrice$crtype)
+# #dataPrice$Year <- as.numeric(dataPrice$Year)
+# 
+# yearOld <- unique(resh.crop$Year)
+# yearNew <- c(2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020)
+# resh.crop$Year1[resh.crop$Year %in% yearOld] <- yearNew[match(resh.crop$Year, yearOld)]
+# resh.crop$Year <- resh.crop$Year1
+# 
+# #crspd <- Reduce(function(...) merge(..., all = TRUE, by = c("Year", "crtype")), list(dataPrice, resh.crop))
+# #idx5 <- which(crspd$OBJECTID>0)
+# 
+# #resh.price <- crspd[c(idx5),]
+# 
+# data <- data.frame(resh.crop$Year, resh.crop$x_coord, resh.crop$y_coord, resh.crop$crtype, 
+#                    resh.temp$TempAVG, resh.temp$TempAM, resh.temp$TempJJ, resh.prec$PrecAVG,
+#                    resh.prec$PrecAM, resh.prec$PrecJJ, resh.rad$RadAVG, resh.rad$RadAM, 
+#                    resh.rad$RadJJ, resh.stype$buek1000, resh.stype$dem1000, resh.stype$slope1000)
+# names(data) <- c("Year", "X", "Y", "CType", "tAVG", "tAM", "tJJ", "pAVG", "pAM", "pJJ",
+#                  "rAVG", "rAM", "rJJ", "SType", "SElev", "SSlope")
+# 
+# #Erase workspace, and perform garbage collection
+# gc() 
+# rm(resh.crop, resh.prec, resh.rad, resh.stype, resh.temp,
+#    crop, i, idx, idx1, idx2, idx3, idx4, j, prec, rad, ref, soil, temp, yearNew, yearOld)
+
+#}
+print("finished")
+end_time <- Sys.time()
+print("--------------------------------")
+print("finished Climate Data processing")
+print(end_time - crop_data_time)
+
+print("---------------------------------")
+print("finished Complete Data processing")
+print(end_time-start_time)
+
+#write.csv(data, "D:/Projects_IACS/Database_DE/CropRotPred_DE/Output_210912/dataDE_5000_5.csv", row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
