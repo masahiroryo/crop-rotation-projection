@@ -6,7 +6,7 @@ library(dplyr, warn.conflicts = FALSE)
 
 # read data -----------------------------------------------------------------------------------
 
-n = 7500000
+n = 20000000
 set.seed(seed = 187)
 
 data_crop <- fread("./data/reshaped_crop.csv", sep =",", header = TRUE)
