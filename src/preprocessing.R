@@ -7,8 +7,8 @@ library(reshape2)
 
 # set number of samples -----------------------------------------------------------------------
 
-# n = 4223142
-n = 2111571 # half of data (4223142)
+n = 4223142 
+# n = 2111571 # half of data (4223142)
 #n = 1407714 # a third of data (4223142)
 #n = 1055786 # a forth of data (4223142)
 set.seed(seed = 187)
@@ -19,7 +19,8 @@ start_time <- Sys.time()
 data_ref <- fread("./data/ref.csv", sep = ",", header = TRUE) %>% 
   mutate_at(3:4, round) %>% 
   arrange(OBJECTID) %>% 
-  sample_n(n) %>%
+  #sample_n(n) %>%
+  filter(state == "BV") %>% 
   as.data.table()
 
 # read crop data ------------------------------------------------------------------------------
@@ -242,4 +243,7 @@ end_time <- Sys.time()
 print(end_time-start_time)
 print(paste("for", n, "samples"))
 
-write.csv(data, paste("./data/clean/sample",n,".csv", sep = ""), row.names = FALSE)
+print("saving")
+# write.csv(data, paste("./data/clean/sample",n,".csv", sep = ""), row.names = FALSE)
+write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
+print("finished")
