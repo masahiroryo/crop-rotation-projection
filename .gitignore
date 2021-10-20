@@ -2,5 +2,6 @@
 .Rhistory
 .Rproj.user/
 literature/
-.sqlite
+*.sqlite
+*.xlsx
 .obsidian/
