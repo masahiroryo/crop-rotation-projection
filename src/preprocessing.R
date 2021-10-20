@@ -16,7 +16,7 @@ print(paste("starting for", n ,"samples"))
 start_time <- Sys.time()
 
 # read ref data -------------------------------------------------------------------------------
-data_ref <- fread("./data/ref.csv", sep = ",", header = TRUE) %>% 
+data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>% 
   mutate_at(3:4, round) %>% 
   arrange(OBJECTID) %>% 
   #sample_n(n) %>%
@@ -27,7 +27,7 @@ data_ref <- fread("./data/ref.csv", sep = ",", header = TRUE) %>%
 
 print("starting crop data")
 
-data_crop_raw <- fread("./data/crop.csv", sep=",", header = TRUE) %>% 
+data_crop_raw <- fread("./data/orig/crop.csv", sep=",", header = TRUE) %>% 
   mutate_at(3:4, round) %>% 
   rename_with(~ gsub("crop_", "", .x,fixed = TRUE)) %>% 
   as.data.table()
@@ -46,7 +46,7 @@ print("finished crop data")
 
 # read soil data ------------------------------------------------------------------------------
 print("starting soil data")
-data_soil_raw <- fread("./data/soil.csv", sep=",", header = TRUE) %>% 
+data_soil_raw <- fread("./data/orig/soil.csv", sep=",", header = TRUE) %>% 
   mutate_at(3:4, round) %>% 
   arrange(OBJECTID) %>%
   as.data.table()
@@ -58,7 +58,7 @@ gc()
 print("finished soil data")
 # read temperature data -----------------------------------------------------------------------
 print("starting temperature data")
-data_temp_raw <- fread("./data/temp.csv", sep=",", header = T)
+data_temp_raw <- fread("./data/orig/temp.csv", sep=",", header = T)
 temp <- data.frame("cell_id"=data_temp_raw$cell_id)
 
 i <- 5
@@ -119,7 +119,7 @@ gc()
 print("finished temperature data")
 # read precipitation data -----------------------------------------------------------------------
 print("starting precipitation data")
-data_prec_raw <- fread("./data/prec.csv", sep=",", header = T)
+data_prec_raw <- fread("./data/orig/prec.csv", sep=",", header = T)
 temp <- data.frame("cell_id"=data_prec_raw$cell_id)
 
 i <- 5
@@ -180,7 +180,7 @@ gc()
 print("finished precipitation data")
 # read radiation data -------------------------------------------------------------------------
 print("starting radiation data")
-data_rad_raw <- fread("./data/rad.csv", sep=",", header = T)
+data_rad_raw <- fread("./data/orig/rad.csv", sep=",", header = T)
 temp <- data.frame("cell_id"=data_rad_raw$cell_id)
 
 i <- 5
