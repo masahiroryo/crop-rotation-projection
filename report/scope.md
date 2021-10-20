@@ -1,0 +1,2 @@
+The goal of this thesis is to understand farmers decision making for crop rotations and predict future crop rotations based on socio-economic parameters. The dataset consists of german crop rotation data over the last 16 years (2005-2020) with information about soil, climate and economic variables. 
+In order to achieve this goal I will use an machine learning approach to get information from the data. 
