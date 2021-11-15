@@ -7,6 +7,9 @@ library(tidyverse)
 # read data -----------------------------------------------------------------------------------
 
 data <- fread("./data/clean/sample_bavaria.csv", sep = ",", header = TRUE)
+data$crtype <- dplyr::recode(data$crtype, 
+                             `70` = 20L,
+                             `80` = 21L)
 gc()
 
 # exploration ------------------------------------------------------------------------------------
@@ -21,8 +24,17 @@ ggplot(data = smaller) +
 ggplot(smaller) + 
   geom_bar(mapping = aes(x = crtype))
 
-crop <- data %>% 
-  select(crType)
+
+plot_crops_per_year <- function(year){
+  dat <- smaller %>% 
+    filter(Year == year) %>% 
+    as.data.table()
+  
+  ggplot(data = dat) + 
+    geom_point(mapping = aes(x = x_coord, y = y_coord, color=factor(crtype)), position = "jitter", stroke = 0.1)
+}
+
+plot_crops_per_year(2018)
 
 # crop sequence -----------------------------------------------------------
 
@@ -79,5 +91,3 @@ for(i in c(2:nrow(crop_sequences))){
 end_time <- Sys.time()
 print(end_time-start_time)
 which(table(most_freq$Sequence) == max(table(most_freq$Sequence)))
-
-
