@@ -15,7 +15,7 @@ gc()
 # exploration ------------------------------------------------------------------------------------
 
 smaller <- data %>% 
-  sample_n(50000) %>% 
+  sample_n(100000) %>%
   as.data.table()
 
 ggplot(data = smaller) + 
@@ -34,7 +34,7 @@ plot_crops_per_year <- function(year){
     geom_point(mapping = aes(x = x_coord, y = y_coord, color=factor(crtype)), position = "jitter", stroke = 0.1)
 }
 
-plot_crops_per_year(2018)
+plot_crops_per_year(2005)
 
 # crop sequence -----------------------------------------------------------
 
@@ -50,44 +50,63 @@ gc()
 crop_sequences <- sliced_data %>% 
   pivot_wider(names_from = Year, values_from=crtype, values_fn = list(. = mean)) %>% 
   as.data.table()
-rm(sliced_data,data)
+# rm(sliced_data,data)
 gc()
 
-# most common n=2 crop sequence
-k = 2
-find_k_consecutives <- function(y, k){
-  res <- lapply(k, function(a) sapply(1:a, function(x) y[(0 + x):(length(y) - a + x)])) %>% 
-    lapply(as.data.frame) %>% 
-    setNames(sapply(2:(length(.) + 1), function(a) paste0("Consecutive", a)))
+# parallel approach
+# library(foreach)
+# library(doParallel)  
+# no_cores <- detectCores() - 1  
+# cl <- makeCluster(no_cores, type="FORK")  
+# registerDoParallel(cl)  
+
+# testing ground ----------------------------------------------------------
+crop_sequences <- as.data.frame(crop_sequences[,-1])
+
+mat <- matrix(0, nrow = 21, ncol = 21)
+colnames(mat) <- c(1:21)
+
+start_time <- Sys.time()
+invisible(foreach (i=1:nrow(crop_sequences)) %do% 
+  for (j in 2:ncol(crop_sequences)) {
+    a = crop_sequences[i,j-1]
+    b = crop_sequences[i,j]
+    mat[a, b] = mat[a, b] + 1
+  })
+end_time <- Sys.time()
+old <- end_time-start_time
+
+a = 2
+n_largest <- function(m,n) {
+  res <- sort(mat, decreasing=TRUE)[1:n]
   return(res)
 }
-
-find_most_freq <- function(z) {
-  lapply(1:length(z), function(x) (as.data.frame(table(do.call(
-    paste, z[[x]])), stringsAsFactors = F) %>% 
-      dplyr::mutate(length = nchar(Var1)) %>% 
-      dplyr::filter(Freq == max(Freq) & Freq > 0)) ) %>% 
-    .[which(sapply(., nrow) > 0)] %>% 
-    dplyr::bind_rows() %>%
-    dplyr::filter(Freq == max(Freq)) %>%
-    dplyr::filter(length == max(length)) %>%
-    dplyr::rename(Sequence = Var1) %>%
-    dplyr::select(-length)
-}
-
-get_most_frequent_sequence <- function(vec,k=2){
-  l <- find_k_consecutives(as.character(vec),k)
-  res <- find_most_freq(l)
-  
-  return(res)
+res <- lapply(1:a, function(x) which(mat==n_largest(mat,4)[x], arr.ind=TRUE))
+for (l in 1:a) {
+  print(res[[l]])
 }
 
 start_time <- Sys.time()
-most_freq = get_most_frequent_sequence((crop_sequences[1,-1]),k)
-for(i in c(2:nrow(crop_sequences))){
-  temp <- (crop_sequences[i,-1])
-  most_freq <- most_freq %>% add_row(get_most_frequent_sequence((temp),k))
-}
+s = parLapply(cl, 1:nrow(crop_sequences), function(i) {
+  xx <- matrix(0, nrow = 21, ncol = 21)
+  colnames(xx) <- c(1:21)
+  for (j in 2:ncol(crop_sequences)) {
+    a = crop_sequences[i,j-1]
+    b = crop_sequences[i,j]
+    xx[a, b] = xx[a, b] + 1
+  }
+  return(xx)
+}) 
+res <- Reduce(`+`, s)
 end_time <- Sys.time()
-print(end_time-start_time)
-which(table(most_freq$Sequence) == max(table(most_freq$Sequence)))
+new <- end_time-start_time
+
+
+print(old)
+print(new)
+all(res == mat)
+
+res <- s[[1]]
+for(i in 1:length(s)) {
+  res <- res + s[[i]]
+}
