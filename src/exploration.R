@@ -38,7 +38,12 @@ plot_crops_per_year(2005)
 
 # crop sequence -----------------------------------------------------------
 
-n = 16*1000
+library(doParallel)
+no_cores <- detectCores() - 1
+cl <- makeCluster(no_cores, type="FORK")
+# registerDoParallel(cl)
+
+n = 16*100000
 
 sliced_data <- data %>% 
   select(OBJECTID, Year, crtype) %>% 
@@ -50,63 +55,59 @@ gc()
 crop_sequences <- sliced_data %>% 
   pivot_wider(names_from = Year, values_from=crtype, values_fn = list(. = mean)) %>% 
   as.data.table()
-# rm(sliced_data,data)
+rm(sliced_data,data)
 gc()
 
-# parallel approach
-# library(foreach)
-# library(doParallel)  
-# no_cores <- detectCores() - 1  
-# cl <- makeCluster(no_cores, type="FORK")  
-# registerDoParallel(cl)  
-
-# testing ground ----------------------------------------------------------
 crop_sequences <- as.data.frame(crop_sequences[,-1])
 
-mat <- matrix(0, nrow = 21, ncol = 21)
-colnames(mat) <- c(1:21)
-
-start_time <- Sys.time()
-invisible(foreach (i=1:nrow(crop_sequences)) %do% 
-  for (j in 2:ncol(crop_sequences)) {
-    a = crop_sequences[i,j-1]
-    b = crop_sequences[i,j]
-    mat[a, b] = mat[a, b] + 1
-  })
-end_time <- Sys.time()
-old <- end_time-start_time
-
-a = 2
-n_largest <- function(m,n) {
-  res <- sort(mat, decreasing=TRUE)[1:n]
+get_frequences <- function(sequences) {
+  start_time <- Sys.time()
+  s = lapply(1:nrow(crop_sequences), function(i) {
+    xx <- matrix(0, nrow = 21, ncol = 21)
+    colnames(xx) <- c(1:21)
+    for (j in 2:ncol(crop_sequences)) {
+      a = crop_sequences[i,j-1]
+      b = crop_sequences[i,j]
+      xx[a, b] = xx[a, b] + 1
+    }
+    return(xx)
+  }) 
+  res <- Reduce(`+`, s)
+  end_time <- Sys.time()
+  print(end_time-start_time)
   return(res)
 }
-res <- lapply(1:a, function(x) which(mat==n_largest(mat,4)[x], arr.ind=TRUE))
-for (l in 1:a) {
-  print(res[[l]])
+
+get_frequences_par <- function(sequences) {
+  start_time <- Sys.time()
+  s <- parLapply(cl, 1:nrow(crop_sequences), function(i) {
+    xx <- matrix(0, nrow = 21, ncol = 21)
+    colnames(xx) <- c(1:21)
+    for (j in 2:ncol(crop_sequences)) {
+      a = crop_sequences[i,j-1]
+      b = crop_sequences[i,j]
+      xx[a, b] = xx[a, b] + 1
+    }
+    return(xx)
+  }) 
+  res <- Reduce(`+`, s)
+  end_time <- Sys.time()
+  print(end_time-start_time)
+  return(res)
 }
 
-start_time <- Sys.time()
-s = parLapply(cl, 1:nrow(crop_sequences), function(i) {
-  xx <- matrix(0, nrow = 21, ncol = 21)
-  colnames(xx) <- c(1:21)
-  for (j in 2:ncol(crop_sequences)) {
-    a = crop_sequences[i,j-1]
-    b = crop_sequences[i,j]
-    xx[a, b] = xx[a, b] + 1
+n_largest <- function(m,n) {
+  res <- sort(m, decreasing=TRUE)[1:n]
+  return(res)
+}
+get_most_frequent_sequences <- function(freq_mat, a) {
+  res <- lapply(1:a, function(x) which(freq_mat==n_largest(freq_mat,4)[x], arr.ind=TRUE))
+  for (l in 1:a) {
+    print(res[[l]])
   }
-  return(xx)
-}) 
-res <- Reduce(`+`, s)
-end_time <- Sys.time()
-new <- end_time-start_time
-
-
-print(old)
-print(new)
-all(res == mat)
-
-res <- s[[1]]
-for(i in 1:length(s)) {
-  res <- res + s[[i]]
+  return(res)
 }
+
+freq_matrix <- get_frequences(crop_sequences)
+most_freq <- get_most_frequent_sequences(freq_matrix, 4)
+
