@@ -12,19 +12,30 @@ data$crtype <- dplyr::recode(data$crtype,
                              `80` = 21L)
 gc()
 
-# exploration ------------------------------------------------------------------------------------
+# summary statistics --------------------------------------------------------------------------
 
 smaller <- data %>% 
   sample_n(100000) %>%
   as.data.table()
+rm(data)
+gc()
 
-ggplot(data = smaller) + 
-  geom_point(mapping = aes(x = x_coord, y = y_coord), position = "jitter", stroke = 0.1)
-
+# frequency of each crop type
 ggplot(smaller) + 
   geom_bar(mapping = aes(x = crtype))
 
+# frequency of each crop type for specific year
+freq_crops_per_year <- function(year){
+  dat <- smaller %>% 
+    filter(Year == year) %>% 
+    as.data.table()
+  
+  ggplot(dat) + 
+    geom_bar(mapping = aes(x = crtype))
+}
+freq_crops_per_year(2020)
 
+# map with most frequent crop type for specific year
 plot_crops_per_year <- function(year){
   dat <- smaller %>% 
     filter(Year == year) %>% 
@@ -35,6 +46,11 @@ plot_crops_per_year <- function(year){
 }
 
 plot_crops_per_year(2005)
+
+# summary statistics for environmental data
+summary(smaller$TempAVG)
+summary(smaller$PrecAVG)
+summary(smaller$RadAVG)
 
 # crop sequence -----------------------------------------------------------
 
@@ -78,7 +94,7 @@ get_frequences <- function(sequences) {
   return(res)
 }
 
-get_frequences_par <- function(sequences) {
+par_get_frequences <- function(sequences) {
   start_time <- Sys.time()
   s <- parLapply(cl, 1:nrow(crop_sequences), function(i) {
     xx <- matrix(0, nrow = 21, ncol = 21)
@@ -109,5 +125,6 @@ get_most_frequent_sequences <- function(freq_mat, a) {
 }
 
 freq_matrix <- get_frequences(crop_sequences)
-most_freq <- get_most_frequent_sequences(freq_matrix, 4)
+(most_freq <- get_most_frequent_sequences(freq_matrix, 4))
+
 
