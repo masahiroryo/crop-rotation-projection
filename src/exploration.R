@@ -12,6 +12,11 @@ data$crtype <- dplyr::recode(data$crtype,
                              `80` = 21L)
 gc()
 
+data_crop_raw <- fread("./data/orig/crop.csv", sep=",", header = TRUE) %>% 
+  mutate_at(3:4, round) %>% 
+  rename_with(~ gsub("crop_", "", .x,fixed = TRUE)) %>% 
+  as.data.table()
+
 # summary statistics --------------------------------------------------------------------------
 
 smaller <- data %>% 
@@ -51,6 +56,38 @@ plot_crops_per_year(2005)
 summary(smaller$TempAVG)
 summary(smaller$PrecAVG)
 summary(smaller$RadAVG)
+
+# summary about states
+table(data_crop_raw$State)
+
+#pdf(file = "./output/boxplot_states.jpg")
+ggplot(data = data_crop_raw) + 
+  geom_bar(mapping = aes(x = State))
+#dev.off()
+
+# Proportion of crop types -> Crops of minor importance 
+prop_crtype_per_year <- function(y){
+  dat <- smaller %>% 
+    filter(Year == y) %>% 
+    as.data.table()
+  N <- sum(nrow(dat))
+  
+  res <- lapply(c(0:21), function(x){
+    return((sum(dat$crtype==x))/N)
+  })
+  res <- do.call(rbind.data.frame, res)
+  colnames(res) <- "prop"
+  return(res)
+}
+# undervalued crop types
+find_undervalued_crtypes <- function(props){
+  return(which(props < quantile(props$prop, 0.25))-1)
+}
+y = 2020
+cr20 <- prop_crtype_per_year(y)
+
+print(paste("the following crops are underrepresented for the year ", y))
+print(find_undervalued_crtypes(cr20))
 
 # crop sequence -----------------------------------------------------------
 
