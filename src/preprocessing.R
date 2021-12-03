@@ -254,5 +254,5 @@ print(paste("for", n, "samples"))
 
 print("saving")
 # write.csv(data, paste("./data/clean/sample",n,".csv", sep = ""), row.names = FALSE)
-write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
+# write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
 print("finished")
