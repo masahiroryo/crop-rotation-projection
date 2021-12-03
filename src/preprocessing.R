@@ -33,11 +33,11 @@ data_crop_raw <- fread("./data/orig/crop.csv", sep=",", header = TRUE) %>%
   as.data.table()
 
 data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord")) %>% 
-  select(-c("State")) %>% 
+  select(-c("State", -"FID")) %>% 
   arrange(OBJECTID) %>% 
   as.data.table() %>% 
   gather(variable, value, -c("FID", "state", "OBJECTID", "cell_id", "x_coord", "y_coord")) %>% 
-  rename("Year" = variable, "crtype" = value)
+  rename("Year" = variable, "CType" = value)
 
 rm(data_crop_raw)
 gc()
@@ -51,7 +51,10 @@ data_soil_raw <- fread("./data/orig/soil.csv", sep=",", header = TRUE) %>%
   arrange(OBJECTID) %>%
   as.data.table()
 
-data <- inner_join(data_crop, data_soil_raw,by = c("OBJECTID", "x_coord", "y_coord", "state"))
+data <- inner_join(data_crop, data_soil_raw,by = c("OBJECTID", "x_coord", "y_coord", "state")) %>% 
+  rename("SType" = buek1000, 
+         "SElev" = dem1000, 
+         "SSlope" = slope1000)
 
 rm(data_soil_raw,data_crop)
 gc()
@@ -235,7 +238,13 @@ data_rad$Year <- recode(data_rad$Year,
 
 rm(data_rad_)
 gc()
-data <- inner_join(data, data_rad,by = c("OBJECTID", "cell_id", "Year"))
+data <- inner_join(data, data_rad,by = c("OBJECTID", "cell_id", "Year")) %>% 
+  select(-"cell_id") %>% 
+  rename(
+    "State" = state,
+    "X" = x_coord, 
+    "Y" = y_coord
+  )
 rm(data_rad)
 gc()
 print("finished radiation data")
@@ -245,5 +254,5 @@ print(paste("for", n, "samples"))
 
 print("saving")
 # write.csv(data, paste("./data/clean/sample",n,".csv", sep = ""), row.names = FALSE)
-#write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
+write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
 print("finished")
