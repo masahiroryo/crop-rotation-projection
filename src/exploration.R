@@ -83,11 +83,16 @@ prop_crtype_per_year <- function(y){
 find_undervalued_crtypes <- function(props){
   return(which(props < quantile(props$prop, 0.25))-1)
 }
+find_overvalued_crtypes <- function(props){
+  return(which(props > quantile(props$prop, 0.75))-1)
+}
 y = 2020
 cr20 <- prop_crtype_per_year(y)
 
 print(paste("the following crops are underrepresented for the year ", y))
 print(find_undervalued_crtypes(cr20))
+print(paste("the following crops are overrepresented for the year ", y))
+print(find_overvalued_crtypes(cr20))
 
 # crop sequence -----------------------------------------------------------
 
@@ -162,6 +167,6 @@ get_most_frequent_sequences <- function(freq_mat, a) {
 }
 
 freq_matrix <- get_frequences(crop_sequences)
-(most_freq <- get_most_frequent_sequences(freq_matrix, 4))
+most_freq <- get_most_frequent_sequences(freq_matrix, 4)
 
 
