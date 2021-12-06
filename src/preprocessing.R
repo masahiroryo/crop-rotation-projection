@@ -33,7 +33,7 @@ data_crop_raw <- fread("./data/orig/crop.csv", sep=",", header = TRUE) %>%
   as.data.table()
 
 data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord")) %>% 
-  select(-c("State", -"FID")) %>% 
+  select(-"State") %>% 
   arrange(OBJECTID) %>% 
   as.data.table() %>% 
   gather(variable, value, -c("FID", "state", "OBJECTID", "cell_id", "x_coord", "y_coord")) %>% 
@@ -239,7 +239,7 @@ data_rad$Year <- recode(data_rad$Year,
 rm(data_rad_)
 gc()
 data <- inner_join(data, data_rad,by = c("OBJECTID", "cell_id", "Year")) %>% 
-  select(-"cell_id") %>% 
+  select(-c("cell_id","FID")) %>% 
   rename(
     "State" = state,
     "X" = x_coord, 
@@ -252,7 +252,15 @@ end_time <- Sys.time()
 print(end_time-start_time)
 print(paste("for", n, "samples"))
 
-print("saving")
+data$State <- as.factor(data$State)
+data$X <- as.numeric(data$X)
+data$Y <- as.numeric(data$Y)
+data$Year <- as.factor(data$Year)
+data$CType <- as.factor(data$CType)
+data$SType <- as.factor(data$SType)
+data$SElev <- as.numeric(data$SElev)
+
+print("saving...")
 # write.csv(data, paste("./data/clean/sample",n,".csv", sep = ""), row.names = FALSE)
 # write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
 print("finished")
