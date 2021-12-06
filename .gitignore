@@ -5,3 +5,6 @@ literature/
 *.sqlite
 *.xlsx
 .obsidian/
+*.pdf
+*.png
+*.jpg
