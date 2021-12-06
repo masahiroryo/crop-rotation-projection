@@ -11,7 +11,7 @@ library(reshape2)
 # n = 2111571 # half of data (4223142)
 #n = 1407714 # a third of data (4223142)
 #n = 1055786 # a forth of data (4223142)
-# n = 206934
+n = 206934
 
 set.seed(seed = 187)
 print(paste("starting for", n ,"samples"))
@@ -21,8 +21,9 @@ start_time <- Sys.time()
 data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>% 
   mutate_at(3:4, round) %>% 
   arrange(OBJECTID) %>% 
-  # sample_n(n) %>%
-  filter(state == "BV") %>% 
+  distinct(OBJECTID, .keep_all = TRUE) %>% 
+  sample_n(n) %>%
+  # filter(state == "BV") %>%
   as.data.table()
 
 # read crop data ------------------------------------------------------------------------------
