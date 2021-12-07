@@ -11,7 +11,7 @@ library(reshape2)
 # n = 2111571 # half of data (4223142)
 #n = 1407714 # a third of data (4223142)
 #n = 1055786 # a forth of data (4223142)
-n = 206934
+# n = 206934
 
 set.seed(seed = 187)
 print(paste("starting for", n ,"samples"))
@@ -22,7 +22,7 @@ data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>%
   mutate_at(3:4, round) %>% 
   arrange(OBJECTID) %>% 
   distinct(OBJECTID, .keep_all = TRUE) %>% 
-  sample_n(n) %>%
+  # sample_n(n) %>%
   # filter(state == "BV") %>%
   as.data.table()
 
@@ -253,7 +253,7 @@ gc()
 print("finished radiation data")
 end_time <- Sys.time()
 print(end_time-start_time)
-print(paste("for", n, "samples"))
+# print(paste("for", n, "samples"))
 
 data$State <- as.factor(data$State)
 data$X <- as.numeric(data$X)
