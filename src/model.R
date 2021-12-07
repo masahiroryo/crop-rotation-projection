@@ -3,14 +3,12 @@
 library(data.table)
 library(dtplyr)
 library(tidyverse)
-library(tidymodels)
-library(parsnip)
-library(tidypredict)
+library(ranger)
 
 # read data -----------------------------------------------------------------------------------
 
 # data <- fread("./data/clean/sample_bavaria.csv", sep = ",", header = TRUE)
-this is a test commit 
+data <- fread("./data/clean/sample206934.csv", sep = ",", header = TRUE)
 
 # split data ----------------------------------------------------------------------------------
 
@@ -41,10 +39,9 @@ gc()
 
 # model ---------------------------------------------------------------------------------------
 
-set.seed(187)
-res <- rand_forest(mtry = 10, trees = 100) %>%
-  set_engine("ranger", importance = "impurity") %>%
-  set_mode("regression") %>%
-  fit(CType ~ ., data = train_data)
-
-fit <- tidypredict_fit(res)[[1]]
+res <- ranger(CType ~ ., data = train_data, 
+                  importance="impurity",
+                  oob.error = T,
+                  seed = 187,
+                  probability = F
+)
