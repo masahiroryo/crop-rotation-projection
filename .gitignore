@@ -1,10 +1,11 @@
 *.csv
-.Rhistory
-.Rproj.user/
-literature/
 *.sqlite
 *.xlsx
-.obsidian/
 *.pdf
 *.png
 *.jpg
+literature/
+.obsidian/
+.Rhistory
+.Rproj.user/
+
