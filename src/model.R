@@ -4,11 +4,20 @@ library(data.table)
 library(dtplyr)
 library(tidyverse)
 library(ranger)
+library(caret)
 
 # read data -----------------------------------------------------------------------------------
 
 # data <- fread("./data/clean/sample_bavaria.csv", sep = ",", header = TRUE)
 data <- fread("./data/clean/sample206934.csv", sep = ",", header = TRUE)
+
+data$State <- as.factor(data$State)
+data$X <- as.numeric(data$X)
+data$Y <- as.numeric(data$Y)
+data$Year <- as.factor(data$Year)
+data$CType <- as.factor(data$CType)
+data$SType <- as.factor(data$SType)
+data$SElev <- as.numeric(data$SElev)
 
 # split data ----------------------------------------------------------------------------------
 
@@ -40,8 +49,13 @@ gc()
 # model ---------------------------------------------------------------------------------------
 
 res <- ranger(CType ~ ., data = train_data, 
-                  importance="impurity",
-                  oob.error = T,
-                  seed = 187,
-                  probability = F
+              importance="impurity",
+              oob.error = TRUE,
+              seed = 187,
+              probability = FALSE,
+              num.trees=100
 )
+
+pred <- predict(res, data = test_data)
+
+confusionMatrix(pred$predictions ,test_data$CType)
