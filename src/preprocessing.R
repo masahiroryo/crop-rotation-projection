@@ -7,10 +7,10 @@ library(reshape2)
 
 # set number of samples -----------------------------------------------------------------------
 
-#n = 4223142 
+# n = 4223142 
 # n = 2111571 # half of data (4223142)
-#n = 1407714 # a third of data (4223142)
-#n = 1055786 # a forth of data (4223142)
+# n = 1407714 # a third of data (4223142)
+# n = 1055786 # a forth of data (4223142)
 # n = 206934
 
 set.seed(seed = 187)
@@ -40,7 +40,25 @@ data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord")) %
   arrange(OBJECTID) %>% 
   as.data.table() %>% 
   gather(variable, value, -c("FID", "state", "OBJECTID", "cell_id", "x_coord", "y_coord")) %>% 
-  rename("Year" = variable, "CType" = value)
+  rename("Year" = variable, "CType" = value) %>% 
+  arrange(OBJECTID)
+
+add_prev_crop_type <- function(dat){
+  pctype <- dat$CType
+  pctype[seq(0, nrow(dat), by=16)] <- NA
+  pctype <- c(NA, pctype[-length(pctype)])
+  return(pctype)
+}
+data_crop$PCType <- add_prev_crop_type(data_crop)
+
+add_prev_prev_crop_type <- function(dat){
+  ppctype <- dat$CType
+  ppctype[sort(c(seq(0, nrow(dat), by=16), seq(-1, nrow(dat)-1, by=16)))[-c(1:2)]] <- NA
+  ppctype <- c(NA, NA, ppctype[-c(length(ppctype)-1, length(ppctype))])
+  return(ppctype)
+}
+
+data_crop$PPCType <- add_prev_prev_crop_type(data_crop)
 
 rm(data_crop_raw)
 gc()
@@ -256,6 +274,6 @@ print(end_time-start_time)
 # print(paste("for", n, "samples"))
 
 print("saving...")
-# write.csv(data, paste("./data/clean/sample",n,".csv", sep = ""), row.names = FALSE)
+# write.csv(data, paste("./data/clean/sample_",n,".csv", sep = ""), row.names = FALSE)
 # write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
 print("finished")
