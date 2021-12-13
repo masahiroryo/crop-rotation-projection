@@ -7,7 +7,7 @@ library(tidyverse)
 # read data -----------------------------------------------------------------------------------
 
 data <- fread("./data/clean/sample_bavaria.csv", sep = ",", header = TRUE)
-data$crtype <- dplyr::recode(data$crtype, 
+data$CType <- dplyr::recode(data$CType, 
                              `70` = 20L,
                              `80` = 21L)
 gc()
@@ -27,7 +27,7 @@ gc()
 
 # frequency of each crop type
 ggplot(smaller) + 
-  geom_bar(mapping = aes(x = crtype))
+  geom_bar(mapping = aes(x = CType))
 
 # frequency of each crop type for specific year
 freq_crops_per_year <- function(year){
