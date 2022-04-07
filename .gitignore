@@ -1,11 +1,15 @@
+# file types
 *.csv
 *.sqlite
 *.xlsx
 *.pdf
 *.png
 *.jpg
+*.Rdata
+
+#folders
 literature/
-.obsidian/
+data/
 .Rhistory
 .Rproj.user/
 
