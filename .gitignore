@@ -10,6 +10,7 @@
 #folders
 literature/
 data/
+output/
 .Rhistory
 .Rproj.user/
 
