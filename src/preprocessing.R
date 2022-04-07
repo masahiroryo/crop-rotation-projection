@@ -11,10 +11,15 @@ library(reshape2)
 # n = 2111571 # half of data (4223142)
 # n = 1407714 # a third of data (4223142)
 # n = 1055786 # a forth of data (4223142)
-# n = 206934
+# n = 32993
+# n = 4124
+# n = 439268
+# n = 1757075 # bavarian n
+# n = 878537 # half of bavarian data
+# n = 439268 # 1/4 of bavarian data
 
 set.seed(seed = 187)
-print(paste("starting for", n ,"samples"))
+# print(paste("starting for", n ,"samples"))
 start_time <- Sys.time()
 
 # read ref data -------------------------------------------------------------------------------
@@ -22,8 +27,8 @@ data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>%
   mutate_at(3:4, round) %>% 
   arrange(OBJECTID) %>% 
   distinct(OBJECTID, .keep_all = TRUE) %>% 
-  # sample_n(n) %>%
-  # filter(state == "BV") %>%
+  filter(state == "BV") %>%
+  # sample_n(n) %>% 
   as.data.table()
 
 # read crop data ------------------------------------------------------------------------------
@@ -42,6 +47,21 @@ data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord")) %
   gather(variable, value, -c("FID", "state", "OBJECTID", "cell_id", "x_coord", "y_coord")) %>% 
   rename("Year" = variable, "CType" = value) %>% 
   arrange(OBJECTID)
+
+test <- data_crop %>% 
+  filter(!(CType %in% c(0,18,19,70,80))) %>% 
+  as.data.table()
+
+table(table(data_crop$OBJECTID)==16)
+table(table(test$OBJECTID)==16)
+
+test2 <- which(table(test$OBJECTID)==16, arr.ind = TRUE)
+test3 <- rownames(test2)
+
+data_crop <- data_crop %>% 
+  filter(OBJECTID %in% test3) %>% 
+  filter(!(OBJECTID %in% c(1416159 ,1472946 ,1744958,1950867  )))
+table(table(data_crop$OBJECTID)==16)
 
 add_prev_crop_type <- function(dat){
   pctype <- dat$CType
@@ -202,6 +222,7 @@ data <- inner_join(data, data_prec,by = c("OBJECTID", "cell_id", "Year"))
 rm(data_prec)
 gc()
 print("finished precipitation data")
+
 # read radiation data -------------------------------------------------------------------------
 print("starting radiation data")
 data_rad_raw <- fread("./data/orig/rad.csv", sep=",", header = T)
@@ -269,11 +290,75 @@ data <- inner_join(data, data_rad,by = c("OBJECTID", "cell_id", "Year")) %>%
 rm(data_rad)
 gc()
 print("finished radiation data")
+
+
+# read price data ---------------------------------------------------------
+
+print("starting economy data")
+
+data_price_raw <- fread("./data/orig/price.csv", sep=",", header = T)
+data_p <- data_price_raw %>% 
+  mutate(Item = recode(Item, "Vegetables, leguminous nes" = "Vegetables, leguminous")) %>% 
+  filter(Unit == 'USD') %>%
+  as.data.table()
+
+data_p <- data_p %>% 
+  pivot_wider(id_cols = Item, values_from = Value,names_from = Year) %>% 
+  as.data.table()
+
+# encode NA data as mean over rows
+k <- which(is.na(data_p), arr.ind=TRUE)
+data_p[k] <- rowMeans(data_p[,-1], na.rm=TRUE)[k[,1]]
+data_p$`2020` <- round(rowMeans(data_p[,-1]),2) # set data for 2020 as mean over rows
+
+# data_p$mean <- round(rowMeans(data_p[,-1]),2)
+
+scheme <- fread("./data/orig/classification.csv", sep="\t", header = TRUE)
+scheme$`Price Description (as of 24.09.2021, subject to changes!)` <- tolower(scheme$`Price Description (as of 24.09.2021, subject to changes!)`)
+data_p$Item <- tolower(data_p$Item)
+
+temp <- scheme %>% 
+  select(`Crop Class ID`, `Price Description (as of 24.09.2021, subject to changes!)`) %>% 
+  as.data.table()
+colnames(temp) <- c('ID', 'Item')
+temp[7,2] <- "triticale"
+
+data_price <- inner_join(temp, data_p, by = "Item") %>% 
+  # select(-"mean") %>% #only take years average
+  as.data.table()
+
+library(parallel)
+cl = makeCluster(6L)
+clusterExport(cl, list("data", "data_price"))
+clusterEvalQ(cl, { library(data.table) })
+res <- parSapply(cl, 1:nrow(data), function(i) {
+  id <- data[i,]$CType
+  year <- data[i,]$Year
+  return(as.numeric(data_price[which(data_price$ID==id), ..year]))
+})
+# data_price <- inner_join(temp, data_p, by = "Item") %>% 
+#   select("ID", "Item", "mean") %>% #only take years average
+#   as.data.table()
+# res_avg <- parSapply(cl, 1:nrow(data), function(i) {
+#   id <- data[i,]$CType
+#   return(data_price[which(data_price$ID==id)]$mean)
+# })
+data$price <- res
+# data$priceAVG <- res_avg
+
+print("finished economy data")
+
 end_time <- Sys.time()
 print(end_time-start_time)
 # print(paste("for", n, "samples"))
 
 print("saving...")
-# write.csv(data, paste("./data/clean/sample_",n,".csv", sep = ""), row.names = FALSE)
-# write.csv(data, "./data/clean/sample_bavaria.csv", row.names = FALSE)
+#write.csv(data, paste("./data/clean/sample_",n,".csv", sep = ""), row.names = FALSE)
+#write.csv(data, "./data/clean/sample_bavaria_quarter.csv", row.names = FALSE)
+write.csv(data, "./data/clean/sample_clean.csv", row.names = FALSE)
 print("finished")
+
+
+
+
+
