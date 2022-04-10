@@ -9,17 +9,13 @@ library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
 
-# data <- fread("./data/clean/sample_bavaria.csv", sep = ",", header = TRUE)
-# data <- fread("./data/clean/sample_bavaria_quater.csv", sep = ",", header = TRUE)
-# data <- fread("./data/clean/sample_32993.csv", sep = ",", header = TRUE)
-# data <- fread("./data/clean/sample_191961.csv", sep = ",", header = TRUE)
-# data <- fread("./data/clean/sample_4124.csv", sep=",",header=TRUE)
-data <- fread("./data/clean/sample_clean.csv", sep=",", header=TRUE)
+data <- fread("./data/clean/data_clean.csv", sep=",", header=TRUE)
+
+set.seed(187)
 
 data$State <- as.factor(data$State)
 data$X <- as.numeric(data$X)
 data$Y <- as.numeric(data$Y)
-# data$Year <- as.factor(data$Year)
 data$Year <- as.integer(data$Year)
 data$CType <- as.factor(data$CType)
 data$PCType <- as.factor(data$PCType)
@@ -30,7 +26,6 @@ data$SElev <- as.numeric(data$SElev)
 data <- data %>%
   drop_na() %>%
   select(-OBJECTID) %>%
-  # select(-price) %>% #test without price data lol
   as.data.table()
 
 # split data ----------------------------------------------------------------------------------
@@ -41,7 +36,6 @@ split_data <- function(dataset) {
   print(unique(years))
   tail <- years[(length(years))]
   head <- years[1:(length(years)-1)]
-  rest <- years[length(years)]
   
   train <- dataset %>% 
     filter(Year %in% head) %>% 
@@ -51,28 +45,20 @@ split_data <- function(dataset) {
     filter(Year %in% tail) %>% 
     as.data.table()
   
-  eval <- dataset %>% 
-    filter(Year %in% rest) %>% 
-    as.data.table()
-  
-  return(list(train,test,eval))
+  return(list(train,test))
 }
 
 split <- split_data(data)
 train_data <- split[[1]]
 test_data <- split[[2]]
-eval_data <- split[[3]]
 
 unique(train_data$Year)
 unique(test_data$Year)
-
 
 # clean workplace -----------------------------------------------------------------------------
 
 rm(split)
 gc()
-
-set.seed(187)
 
 # model ---------------------------------------------------------------------------------------
 
@@ -89,7 +75,7 @@ t2 <- Sys.time()
 print(t2-t1)
 gc()
 
-# evaluate ----------------------------------------------------------------
+# evaluate ----------------------------------------------------------------------------------------------
 
 pred <- predict(res, data = test_data)
 
@@ -114,7 +100,9 @@ ggplot(data=class_accuracy, aes(x=pred.predictions, y=acc)) +
 
 save(res,pred,confusion_matrix,class_accuracy, file="./output/ranger_single.RData")
 
-# TSCV --------------------------------------------------------------------
+
+# Time Series Cross Validation --------------------------------------------------------------------------
+
 t1 <- Sys.time()
 
 time_slices <- caret::createTimeSlices(unique(data$Year), initialWindow = 1, fixedWindow = FALSE, horizon = 1)
@@ -166,7 +154,6 @@ t2 <- Sys.time()
 print(t2-t1)
 
 save(results, file="./output/TSCVres.RData")
-load(file="./TSCVres.RData")
 gc()
 
 df <- data.frame(num_years=unlist(results[[1]]),acc=unlist(results[[2]]), kappa=unlist(results[[3]]) )

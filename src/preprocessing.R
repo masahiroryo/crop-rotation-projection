@@ -5,30 +5,18 @@ library(dtplyr)
 library(tidyverse)
 library(reshape2)
 
-# set number of samples -----------------------------------------------------------------------
-
-# n = 4223142 
-# n = 2111571 # half of data (4223142)
-# n = 1407714 # a third of data (4223142)
-# n = 1055786 # a forth of data (4223142)
-# n = 32993
-# n = 4124
-# n = 439268
-# n = 1757075 # bavarian n
-# n = 878537 # half of bavarian data
-# n = 439268 # 1/4 of bavarian data
+# set seed ----------------------------------------------------------------
 
 set.seed(seed = 187)
-# print(paste("starting for", n ,"samples"))
 start_time <- Sys.time()
 
 # read ref data -------------------------------------------------------------------------------
+
 data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>% 
-  mutate_at(3:4, round) %>% 
+  mutate_at(3:4, round) %>% # round coordinates for better calculation
   arrange(OBJECTID) %>% 
-  distinct(OBJECTID, .keep_all = TRUE) %>% 
-  filter(state == "BV") %>%
-  # sample_n(n) %>% 
+  distinct(OBJECTID, .keep_all = TRUE) %>% # only keep unique plots of land
+  # filter(state == "BV") %>%
   as.data.table()
 
 # read crop data ------------------------------------------------------------------------------
@@ -41,26 +29,22 @@ data_crop_raw <- fread("./data/orig/crop.csv", sep=",", header = TRUE) %>%
   as.data.table()
 
 data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord")) %>% 
-  select(-"State") %>% 
+  select(-"State") %>%  # remove duplicated col
   arrange(OBJECTID) %>% 
   as.data.table() %>% 
   gather(variable, value, -c("FID", "state", "OBJECTID", "cell_id", "x_coord", "y_coord")) %>% 
   rename("Year" = variable, "CType" = value) %>% 
   arrange(OBJECTID)
 
-test <- data_crop %>% 
+x <- data_crop %>% # remove crop types we cant use for the model
   filter(!(CType %in% c(0,18,19,70,80))) %>% 
   as.data.table()
-
-table(table(data_crop$OBJECTID)==16)
-table(table(test$OBJECTID)==16)
-
-test2 <- which(table(test$OBJECTID)==16, arr.ind = TRUE)
-test3 <- rownames(test2)
+y <- which(table(x$OBJECTID)==16, arr.ind = TRUE)
+z <- rownames(y)
 
 data_crop <- data_crop %>% 
-  filter(OBJECTID %in% test3) %>% 
-  filter(!(OBJECTID %in% c(1416159 ,1472946 ,1744958,1950867  )))
+  filter(OBJECTID %in% z) %>% 
+  filter(!(OBJECTID %in% c(1416159 ,1472946 ,1744958, 1950867))) # quick fix for remaining plots
 table(table(data_crop$OBJECTID)==16)
 
 add_prev_crop_type <- function(dat){
@@ -86,6 +70,7 @@ gc()
 print("finished crop data")
 
 # read soil data ------------------------------------------------------------------------------
+
 print("starting soil data")
 data_soil_raw <- fread("./data/orig/soil.csv", sep=",", header = TRUE) %>% 
   mutate_at(3:4, round) %>% 
@@ -100,15 +85,16 @@ data <- inner_join(data_crop, data_soil_raw,by = c("OBJECTID", "x_coord", "y_coo
 rm(data_soil_raw,data_crop)
 gc()
 print("finished soil data")
+
 # read temperature data -----------------------------------------------------------------------
+
 print("starting temperature data")
 data_temp_raw <- fread("./data/orig/temp.csv", sep=",", header = T)
 temp <- data.frame("cell_id"=data_temp_raw$cell_id)
 
 i <- 5
 j <- 4
-
-for (i in 5:20){
+for (i in 5:20){ # take average and summer data
   temp[paste(i,"tAVG",sep="")] <- data.frame(rowMeans(data_temp_raw[,j:(j+5)]/10)) #March to August
   temp[paste(i,"tAM",sep="")] <- data.frame(rowMeans(data_temp_raw[,(j+1):(j+2)]/10)) #April to May
   temp[paste(i,"tJJ",sep="")] <- data.frame(rowMeans(data_temp_raw[,(j+3):(j+4)]/10)) #June to July
@@ -121,7 +107,7 @@ gc()
 data_temp_ <- inner_join(temp, data_ref, by = c("cell_id")) %>% 
   filter(OBJECTID >= 0) %>% 
   arrange(OBJECTID) %>% 
-  select(1:50) %>% 
+  select(-c("state","x_coord", "y_coord")) %>%
   as.data.table()
 
 rm(temp,i,j)
@@ -134,7 +120,9 @@ data_temp[,5:8] <- reshape2::melt(data_temp_[,c(1,3,6,9,12,15,18,21,24,27,30,33,
 data_temp[,9:12] <- reshape2::melt(data_temp_[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], 
                                    id = c("cell_id", "OBJECTID"))
 
-data_temp <- data_temp[,-c(5:7,9:11)]
+data_temp <- data_temp %>% 
+  select(c("cell_id","OBJECTID","variable","value","value.1","value.2"))
+
 names(data_temp) <- c("cell_id", "OBJECTID", "Year", "TempAVG", "TempAM", "TempJJ")
 
 data_temp$Year <- recode(data_temp$Year, 
@@ -161,7 +149,9 @@ data <- inner_join(data, data_temp,by = c("OBJECTID", "cell_id", "Year"))
 rm(data_temp)
 gc()
 print("finished temperature data")
+
 # read precipitation data -----------------------------------------------------------------------
+
 print("starting precipitation data")
 data_prec_raw <- fread("./data/orig/prec.csv", sep=",", header = T)
 temp <- data.frame("cell_id"=data_prec_raw$cell_id)
@@ -182,7 +172,7 @@ gc()
 data_prec_ <- inner_join(temp, data_ref, by = c("cell_id")) %>% 
   filter(OBJECTID >= 0) %>% 
   arrange(OBJECTID) %>% 
-  select(1:50) %>% 
+  select(-c("state","x_coord", "y_coord")) %>%
   as.data.table()
 
 rm(temp,i,j)
@@ -195,7 +185,9 @@ data_prec[,5:8] <- reshape2::melt(data_prec_[,c(1,3,6,9,12,15,18,21,24,27,30,33,
 data_prec[,9:12] <- reshape2::melt(data_prec_[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], 
                                    id = c("cell_id", "OBJECTID"))
 
-data_prec <- data_prec[,-c(5:7,9:11)]
+data_prec <- data_prec %>% 
+  select(c("cell_id","OBJECTID","variable","value","value.1","value.2"))
+
 names(data_prec) <- c("cell_id", "OBJECTID", "Year", "PrecAVG", "PrecAM", "PrecJJ")
 
 data_prec$Year <- recode(data_prec$Year, 
@@ -224,6 +216,7 @@ gc()
 print("finished precipitation data")
 
 # read radiation data -------------------------------------------------------------------------
+
 print("starting radiation data")
 data_rad_raw <- fread("./data/orig/rad.csv", sep=",", header = T)
 temp <- data.frame("cell_id"=data_rad_raw$cell_id)
@@ -244,7 +237,7 @@ gc()
 data_rad_ <- inner_join(temp, data_ref, by = c("cell_id")) %>% 
   filter(OBJECTID >= 0) %>% 
   arrange(OBJECTID) %>% 
-  select(1:50) %>% 
+  select(-c("state","x_coord", "y_coord")) %>%
   as.data.table()
 
 rm(temp,i,j)
@@ -257,7 +250,9 @@ data_rad[,5:8] <- reshape2::melt(data_rad_[,c(1,3,6,9,12,15,18,21,24,27,30,33,36
 data_rad[,9:12] <- reshape2::melt(data_rad_[,c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,50)], 
                                    id = c("cell_id", "OBJECTID"))
 
-data_rad <- data_rad[,-c(5:7,9:11)]
+data_rad <- data_rad %>% 
+  select(c("cell_id","OBJECTID","variable","value","value.1","value.2"))
+
 names(data_rad) <- c("cell_id", "OBJECTID", "Year", "RadAVG", "RadAM", "RadJJ")
 
 data_rad$Year <- recode(data_rad$Year, 
@@ -290,7 +285,6 @@ data <- inner_join(data, data_rad,by = c("OBJECTID", "cell_id", "Year")) %>%
 rm(data_rad)
 gc()
 print("finished radiation data")
-
 
 # read price data ---------------------------------------------------------
 
@@ -350,12 +344,9 @@ print("finished economy data")
 
 end_time <- Sys.time()
 print(end_time-start_time)
-# print(paste("for", n, "samples"))
 
 print("saving...")
-#write.csv(data, paste("./data/clean/sample_",n,".csv", sep = ""), row.names = FALSE)
-#write.csv(data, "./data/clean/sample_bavaria_quarter.csv", row.names = FALSE)
-write.csv(data, "./data/clean/sample_clean.csv", row.names = FALSE)
+write.csv(data, "./data/clean/data_clean.csv", row.names = FALSE)
 print("finished")
 
 
