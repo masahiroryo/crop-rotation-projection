@@ -9,7 +9,7 @@ library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
 
-data <- fread("./data/clean/data_clean.csv", sep=",", header=TRUE)
+data <- fread("./data/clean/sample_clean.csv", sep=",", header=TRUE)
 
 set.seed(187)
 
@@ -81,6 +81,10 @@ pred <- predict(res, data = test_data)
 
 confusion_matrix <- confusionMatrix(pred$predictions ,test_data$CType)
 (x <- confusion_matrix$table %>% confusionMatrix())
+
+as.data.frame(x$table) %>% 
+  ggplot(aes(Prediction,Reference),color = "grey50")+
+  geom_tile(aes(fill=Freq))
 
 plot(res$predictions, las = 2, main="Number of predictions per Class")
 
@@ -157,7 +161,7 @@ save(results, file="./output/TSCVres.RData")
 gc()
 
 df <- data.frame(num_years=unlist(results[[1]]),acc=unlist(results[[2]]), kappa=unlist(results[[3]]) )
-df$test <- c(0.1, 0.4, 0.5, 0.55, 0.6, 0.61, 0.62, 0.63, 0.64, 0.65, 0.65, 0.65, 0.65, 0.65)
+df$test <- c(0.1, 0.4, 0.5, 0.55, 0.6, 0.61, 0.62, 0.63, 0.64, 0.65, 0.65, 0.65, 0.65)
 ggplot(data=df ) +
   geom_line(aes(x=num_years, y=acc, group=1))+
   geom_point(aes(x=num_years, y=acc, group=1))+

@@ -6,7 +6,7 @@ library(tidyverse)
 
 # read data -----------------------------------------------------------------------------------
 
-data <- fread("./data/clean/data_clean.csv", sep=",", header=TRUE)
+data <- fread("./data/clean/data_clean_BB.csv", sep=",", header=TRUE)
 
 # summary statistics --------------------------------------------------------------------------
 
@@ -281,4 +281,44 @@ data %>%
   ggplot()+
   geom_bar(mapping=aes(x=CType))+
   ggtitle("Most frequent crop type for all years")
+
+# freq of price per year --------------------------------------------------------------------------------
+
+dat <- data %>% 
+  filter(CType==5) %>% 
+  select(CType,Year, price) %>% 
+  group_by(Year) %>% 
+  mutate(freq = n()) %>% 
+  filter(unique(Year)) %>% 
+  as.data.table()
+
+test<-function(ctype){
+  dat <- data %>% 
+    filter(CType==ctype) %>% 
+    select(CType,Year, price) %>% 
+    group_by(Year) %>% 
+    mutate(freq = n()) %>% 
+    filter(unique(Year)) %>% 
+    as.data.table()
+  
+  dat %>% 
+    ggplot(mapping=aes(x=price,y=freq))+
+    geom_point()+
+    geom_label(label=dat$Year)+
+    ggtitle(paste("price x freq for ctype", ctype))
+    
+}
+test(2)
+test(3)
+test(4)
+test(5)
+test(6)
+test(7)
+test(8)
+test(9)
+test(10)
+
+
+
+
 

@@ -5,7 +5,7 @@ library(dtplyr)
 library(tidyverse)
 library(reshape2)
 
-# set seed ----------------------------------------------------------------
+# set seed ------------------------------------------------------------------------------------
 
 set.seed(seed = 187)
 start_time <- Sys.time()
@@ -16,7 +16,7 @@ data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>%
   mutate_at(3:4, round) %>% # round coordinates for better calculation
   arrange(OBJECTID) %>% 
   distinct(OBJECTID, .keep_all = TRUE) %>% # only keep unique plots of land
-  # filter(state == "BV") %>%
+  filter(state == "BV") %>%
   as.data.table()
 
 # read crop data ------------------------------------------------------------------------------
@@ -286,7 +286,7 @@ rm(data_rad)
 gc()
 print("finished radiation data")
 
-# read price data ---------------------------------------------------------
+# read price data ---------------------------------------------------------------------------------------
 
 print("starting economy data")
 
@@ -346,7 +346,7 @@ end_time <- Sys.time()
 print(end_time-start_time)
 
 print("saving...")
-write.csv(data, "./data/clean/data_clean.csv", row.names = FALSE)
+# write.csv(data, "./data/clean/data_clean_BV.csv", row.names = FALSE)
 print("finished")
 
 
