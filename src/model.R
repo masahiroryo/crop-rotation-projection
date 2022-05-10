@@ -9,7 +9,7 @@ library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
 
-data <- fread("./data/clean/sample_clean.csv", sep=",", header=TRUE)
+data <- fread("./data/clean/data_clean_BV.csv", sep=",", header=TRUE)
 
 set.seed(187)
 
@@ -26,6 +26,7 @@ data$SElev <- as.numeric(data$SElev)
 data <- data %>%
   drop_na() %>%
   select(-OBJECTID) %>%
+  # select(-price) %>% 
   as.data.table()
 
 # split data ----------------------------------------------------------------------------------
@@ -82,9 +83,12 @@ pred <- predict(res, data = test_data)
 confusion_matrix <- confusionMatrix(pred$predictions ,test_data$CType)
 (x <- confusion_matrix$table %>% confusionMatrix())
 
-as.data.frame(x$table) %>% 
-  ggplot(aes(Prediction,Reference),color = "grey50")+
-  geom_tile(aes(fill=Freq))
+hmap <- as.data.frame(x$table) %>%
+  ggplot(aes(Prediction,Reference, fill=Freq))+
+  scale_fill_gradient(low = "white", high = "red")+
+  geom_tile()+
+  coord_fixed()
+hmap
 
 plot(res$predictions, las = 2, main="Number of predictions per Class")
 
@@ -102,7 +106,7 @@ ggplot(data=class_accuracy, aes(x=pred.predictions, y=acc)) +
   geom_bar(stat="identity")+
   ggtitle("Accuracy for each class")
 
-save(res,pred,confusion_matrix,class_accuracy, file="./output/ranger_single.RData")
+save(res,pred,confusion_matrix,class_accuracy, hmap, file="./output/ranger_single_BV.RData")
 
 
 # Time Series Cross Validation --------------------------------------------------------------------------
@@ -157,7 +161,7 @@ for(i in 1:(length(time_slices[[1]]))) {
 t2 <- Sys.time()
 print(t2-t1)
 
-save(results, file="./output/TSCVres.RData")
+save(results, file="./output/TSCVres_BB.RData")
 gc()
 
 df <- data.frame(num_years=unlist(results[[1]]),acc=unlist(results[[2]]), kappa=unlist(results[[3]]) )

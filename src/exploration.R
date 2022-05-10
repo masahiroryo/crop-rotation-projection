@@ -6,7 +6,7 @@ library(tidyverse)
 
 # read data -----------------------------------------------------------------------------------
 
-data <- fread("./data/clean/data_clean_BB.csv", sep=",", header=TRUE)
+data <- fread("./data/clean/data_clean_BV.csv", sep=",", header=TRUE)
 
 # summary statistics --------------------------------------------------------------------------
 
@@ -74,10 +74,10 @@ print(find_overvalued_crtypes(cr20))
 
 # crop sequence -----------------------------------------------------------------------------------------
 
-library(doParallel)
-no_cores <- detectCores() - 1
-cl <- makeCluster(no_cores, type="FORK")
-# registerDoParallel(cl)
+# library(parallel)
+# cl = makeCluster(6L)
+# clusterExport(cl, list("data", "data_price"))
+# clusterEvalQ(cl, { library(data.table) })
 
 dat <- data %>% 
   select(OBJECTID, Year, CType) %>% 
@@ -160,11 +160,10 @@ temp[7,2] <- "triticale"
 data_price <- inner_join(temp, data_p, by = "Item") %>% 
   as.data.table()
 dat <- data_price %>% 
-  # select(-Item) %>% 
+  select(-Item) %>%
   select(c(ID,mean)) %>% 
   arrange(ID) %>% 
   as.data.table()
-# done
 
 dat %>% 
   ggplot(aes(x=ID,y=mean))+
@@ -178,9 +177,9 @@ ggplot(data_price) +
 
 corr <- ggplot() + 
   geom_bar(data=data, mapping = aes(x = CType))+
-  geom_line(data=data_price, mapping = aes(x = ID, y = mean*500), color="red")+
+  geom_line(data=data_price, mapping = aes(x = ID, y = mean*1000), color="red")+
   labs(x="Crop Type", y="")
-save(corr, file="./output/correlation.RData")
+save(corr, file="./output/correlation_BV.RData")
 
 # change of price over the years
 
@@ -248,7 +247,7 @@ mean_price <- temp %>%
   geom_vline(xintercept = 2012, color="red")+
   geom_vline(xintercept = 2016, color="red")
 
-save(mean_price,file="./output/mean_price_crops.RData")
+save(mean_price,file="./output/mean_price_crops_BV.RData")
 
 # crop frequency throughout the years
 
@@ -276,7 +275,7 @@ freq_crops_per_year(2017)
 freq_crops_per_year(2018)
 freq_crops_per_year(2019)
 ctype_by_year_plot <- freq_crops_per_year(2020)
-save(ctype_by_year_plot,file="./output/freq_plot_2020.Rdata")
+save(ctype_by_year_plot,file="./output/freq_plot_2020_BV.Rdata")
 data %>% 
   ggplot()+
   geom_bar(mapping=aes(x=CType))+
@@ -317,6 +316,7 @@ test(7)
 test(8)
 test(9)
 test(10)
+test(12)
 
 
 

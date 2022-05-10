@@ -5,46 +5,47 @@ library(dtplyr)
 library(tidyverse)
 library(reshape2)
 
-# set seed ------------------------------------------------------------------------------------
-
-set.seed(seed = 187)
 start_time <- Sys.time()
+p_state <- "BV"
 
 # read ref data -------------------------------------------------------------------------------
 
 data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>% 
   mutate_at(3:4, round) %>% # round coordinates for better calculation
   arrange(OBJECTID) %>% 
+  filter(state == p_state) %>% ## filter state we want to analyse
   distinct(OBJECTID, .keep_all = TRUE) %>% # only keep unique plots of land
-  filter(state == "BV") %>%
   as.data.table()
 
+table(data_ref$state)
 # read crop data ------------------------------------------------------------------------------
 
 print("starting crop data")
 
 data_crop_raw <- fread("./data/orig/crop.csv", sep=",", header = TRUE) %>% 
-  mutate_at(3:4, round) %>% 
+  mutate_at(3:4, round) %>% # round coordinates for better calculation
   rename_with(~ gsub("crop_", "", .x,fixed = TRUE)) %>% 
+  rename(state=State) %>%
   as.data.table()
 
-data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord")) %>% 
-  select(-"State") %>%  # remove duplicated col
+data_crop <- inner_join(data_ref, data_crop_raw, by = c("x_coord", "y_coord", "state")) %>% 
   arrange(OBJECTID) %>% 
   as.data.table() %>% 
   gather(variable, value, -c("FID", "state", "OBJECTID", "cell_id", "x_coord", "y_coord")) %>% 
   rename("Year" = variable, "CType" = value) %>% 
   arrange(OBJECTID)
 
+table(table(data_crop$OBJECTID)==16)
+
 x <- data_crop %>% # remove crop types we cant use for the model
-  filter(!(CType %in% c(0,18,19,70,80))) %>% 
+  filter(!(CType %in% c(0,18,19,70,80))) %>% # no data, grassland or mixed data that we cant use
   as.data.table()
 y <- which(table(x$OBJECTID)==16, arr.ind = TRUE)
 z <- rownames(y)
 
 data_crop <- data_crop %>% 
   filter(OBJECTID %in% z) %>% 
-  filter(!(OBJECTID %in% c(1416159 ,1472946 ,1744958, 1950867))) # quick fix for remaining plots
+  filter(!(OBJECTID %in% c(1416159 ,1472946 ,1744958, 1950867))) # quick fix for remaining plots that dont get filtered 
 table(table(data_crop$OBJECTID)==16)
 
 add_prev_crop_type <- function(dat){
@@ -73,7 +74,7 @@ print("finished crop data")
 
 print("starting soil data")
 data_soil_raw <- fread("./data/orig/soil.csv", sep=",", header = TRUE) %>% 
-  mutate_at(3:4, round) %>% 
+  mutate_at(3:4, round) %>% # round coordinates for better calculation
   arrange(OBJECTID) %>%
   as.data.table()
 
@@ -111,7 +112,7 @@ data_temp_ <- inner_join(temp, data_ref, by = c("cell_id")) %>%
   as.data.table()
 
 rm(temp,i,j)
-gc()
+gc() 
 
 data_temp <- reshape2::melt(data_temp_[,c(1,2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50)], 
                             id = c("cell_id", "OBJECTID"))
@@ -346,7 +347,7 @@ end_time <- Sys.time()
 print(end_time-start_time)
 
 print("saving...")
-# write.csv(data, "./data/clean/data_clean_BV.csv", row.names = FALSE)
+write.csv(data, paste("./data/clean/data_clean_",p_state,".csv", sep=""), row.names = FALSE)
 print("finished")
 
 
