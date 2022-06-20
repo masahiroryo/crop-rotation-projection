@@ -9,53 +9,30 @@ library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
 
-data <- fread("./data/clean/sample_bavaria_half.csv", sep = ",", header = TRUE)
+file_name <- "./data/clean/data.csv"
+data <- fread(file_name, sep = ",", header = TRUE)
 
 # prepare data for model building -----------------------------------------
-
-data$CType <- dplyr::recode(data$CType, # makes it easier to understand
-                            `70` = 20L,
-                            `80` = 21L) 
-
-data <- data %>%                              # NAs will be dropped for the model 
-  mutate(price = replace_na(price, 0)) %>%    # But removing so much data from the time series
-  as.data.table()                             # Would break the model
-
-data <- data %>% 
-  group_by(OBJECTID) %>%
-  mutate(temp = mean(CType)) %>% # remove all data points with only grassland in it
-  filter(temp != 18) %>%         # grassland is not interesting for the model
-  select(-temp) %>%
-  as.data.table()
-
-data$State <- as.factor(data$State)
-data$X <- as.numeric(data$X)
-data$Y <- as.numeric(data$Y)
-data$Year <- as.integer(data$Year)
-data$CType <- as.factor(data$CType)
-data$PCType <- as.factor(data$PCType)
-data$PPCType <- as.factor(data$PPCType)
-data$SType <- as.factor(data$SType)
-data$SElev <- as.numeric(data$SElev)
 
 data <- data %>%
   drop_na() %>% 
   select(-OBJECTID) %>%
   as.data.table()
 
-set.seed(187)
+set.seed(1)
 
 # model building ----------------------------------------------------------
 
 time_slices <- caret::createTimeSlices(unique(data$Year), initialWindow = 1, fixedWindow = FALSE, horizon = 1)
 years = sort(unique(data$Year))
 
-results.names <- c("train_length", "accuracy", "kappa")
+results_names <- c("train_length", "accuracy", "kappa")
 results <- list(list(), list(), list())
-names(results) <- results.names
+names(results) <- results_names
 
+l <- length(time_slices[[1]])
 t1 <- Sys.time()
-for(i in 1:(length(time_slices[[1]]))) {
+for(i in 1:l) {
   print(i)
   data_train <- data %>% 
     filter(Year %in% years[time_slices[[1]][[i]]]) %>% 

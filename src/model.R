@@ -8,8 +8,15 @@ library(caret)
 library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
+# p_state <- "BV"
+test_years <- 1
+# file_name <- paste("./data/clean/data_clean_",p_state,".csv", sep="")
+# file_name <- "./data/clean/vanilla_data.csv"
+# file_name <- "./data/clean/data_no_grass.csv"
+# file_name <- "./data/clean/data_no_no-info-crops.csv"
+file_name <- "./data/clean/data_no-info-crops_price.csv"
 
-data <- fread("./data/clean/data_clean_BV.csv", sep=",", header=TRUE)
+data <- fread(file_name, sep=",", header=TRUE)
 
 set.seed(187)
 
@@ -25,31 +32,32 @@ data$SElev <- as.numeric(data$SElev)
 
 data <- data %>%
   drop_na() %>%
-  select(-OBJECTID) %>%
-  # select(-price) %>% 
+  select(-c(OBJECTID,pprice, lyprice, deltaPrice)) %>%
   as.data.table()
+
+he <- names(data)
 
 # split data ----------------------------------------------------------------------------------
 
-split_data <- function(dataset) {
-  print(unique(dataset$Year))
+split_data <- function(dataset,testyear = 3) {
+  #print(unique(dataset$Year))
   years = sort(unique(dataset$Year))
-  print(unique(years))
-  tail <- years[(length(years))]
-  head <- years[1:(length(years)-1)]
-  
-  train <- dataset %>% 
-    filter(Year %in% head) %>% 
+  #print(unique(years))
+  tail <- years[c((length(years)-testyear+1):length(years))]
+  head <- years[1:(length(years)-testyear)]
+  train <- dataset %>%
+    filter(Year %in% head) %>%
     as.data.table()
-  
-  test <- dataset %>% 
-    filter(Year %in% tail) %>% 
+  test <- dataset %>%
+    filter(Year %in% tail) %>%
     as.data.table()
-  
   return(list(train,test))
 }
 
-split <- split_data(data)
+data <- data %>% 
+  as.data.table()
+
+split <- split_data(data,test_years)
 train_data <- split[[1]]
 test_data <- split[[2]]
 
@@ -58,15 +66,15 @@ unique(test_data$Year)
 
 # clean workplace -----------------------------------------------------------------------------
 
-rm(split)
+rm(split, data)
 gc()
 
 # model ---------------------------------------------------------------------------------------
 
 t1 <- Sys.time()
-res <- ranger(CType ~ ., data = train_data,
+res <- ranger(CType ~ ., data = data,
               importance="impurity",
-              mtry = floor(ncol(train_data)/3),
+              mtry = floor(ncol(data)/3),
               num.trees=100,
               oob.error = TRUE,
               probability = FALSE,
@@ -76,13 +84,14 @@ t2 <- Sys.time()
 print(t2-t1)
 gc()
 
+save(res, file="./output/model_final.RData")
+
 # evaluate ----------------------------------------------------------------------------------------------
 
 pred <- predict(res, data = test_data)
 
 confusion_matrix <- confusionMatrix(pred$predictions ,test_data$CType)
 (x <- confusion_matrix$table %>% confusionMatrix())
-
 hmap <- as.data.frame(x$table) %>%
   ggplot(aes(Prediction,Reference, fill=Freq))+
   scale_fill_gradient(low = "white", high = "red")+
@@ -90,11 +99,20 @@ hmap <- as.data.frame(x$table) %>%
   coord_fixed()
 hmap
 
+pred_train <- predict(res, data = train_data)
+cm <- confusionMatrix(pred_train$predictions ,train_data$CType)
+(x_train <-cm$table %>% confusionMatrix())
+hmap_train <- as.data.frame(x_train$table) %>%
+  ggplot(aes(Prediction,Reference, fill=Freq))+
+  scale_fill_gradient(low = "white", high = "red")+
+  geom_tile()+
+  coord_fixed()
+hmap_train
+
 plot(res$predictions, las = 2, main="Number of predictions per Class")
 
 var_importance <- res$variable.importance
 barplot(var_importance[order(var_importance, decreasing = TRUE)], las = 2, main="Variable importance")
-
 # accuracy for each class
 
 class_accuracy <- data.frame(pred$predictions, test_data$CType) %>%
@@ -106,7 +124,9 @@ ggplot(data=class_accuracy, aes(x=pred.predictions, y=acc)) +
   geom_bar(stat="identity")+
   ggtitle("Accuracy for each class")
 
-save(res,pred,confusion_matrix,class_accuracy, hmap, file="./output/ranger_single_BV.RData")
+# file_name <- paste("./output/ranger_single_",p_state,test_years,".RData", sep="")
+# save(res,pred,confusion_matrix,class_accuracy, hmap, hmap_train, file=file_name)
+save(res,pred,train_data,test_data,file="./output/model_no_grass.RData")
 
 
 # Time Series Cross Validation --------------------------------------------------------------------------
@@ -161,7 +181,8 @@ for(i in 1:(length(time_slices[[1]]))) {
 t2 <- Sys.time()
 print(t2-t1)
 
-save(results, file="./output/TSCVres_BB.RData")
+file_name <- paste("./output/TSCVres_",p_state,".RData", sep="")
+save(results, file=file_name)
 gc()
 
 df <- data.frame(num_years=unlist(results[[1]]),acc=unlist(results[[2]]), kappa=unlist(results[[3]]) )

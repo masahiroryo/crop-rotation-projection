@@ -6,7 +6,11 @@ library(tidyverse)
 
 # read data -----------------------------------------------------------------------------------
 
-data <- fread("./data/clean/data_clean_BV.csv", sep=",", header=TRUE)
+# p_state <- "BV"
+# test_years <- 3
+
+file_name <- "./data/clean/data.csv"
+data <- fread(file_name, sep=",", header=TRUE)
 
 # summary statistics --------------------------------------------------------------------------
 
@@ -50,7 +54,7 @@ prop_crtype_per_year <- function(y){
     as.data.table()
   N <- sum(nrow(dat))
   
-  res <- lapply(c(1:17), function(x){
+  res <- lapply(c(1:(length(unique(data$CType)))), function(x){
     return((sum(dat$CType==x))/N)
   })
   res <- do.call(rbind.data.frame, res)
@@ -88,7 +92,6 @@ gc()
 crop_sequences <- dat %>% 
   pivot_wider(names_from = Year, values_from=CType, values_fn = list(. = mean)) %>% 
   as.data.table()
-rm(dat,data)
 gc()
 
 crop_sequences <- as.data.frame(crop_sequences[,-1])
@@ -124,7 +127,7 @@ get_most_frequent_sequences <- function(freq_mat, a) {
 }
 
 freq_matrix <- get_frequences(crop_sequences)
-most_freq <- get_most_frequent_sequences(freq_matrix, 4)
+most_freq <- get_most_frequent_sequences(freq_matrix, 3)
 
 # price and ctype ---------------------------------------------------------------------------------------
 
@@ -165,10 +168,6 @@ dat <- data_price %>%
   arrange(ID) %>% 
   as.data.table()
 
-dat %>% 
-  ggplot(aes(x=ID,y=mean))+
-  geom_bar()
-
 ggplot(data_price) + 
   geom_line(mapping = aes(x = ID, y = mean))
 
@@ -179,7 +178,8 @@ corr <- ggplot() +
   geom_bar(data=data, mapping = aes(x = CType))+
   geom_line(data=data_price, mapping = aes(x = ID, y = mean*1000), color="red")+
   labs(x="Crop Type", y="")
-save(corr, file="./output/correlation_BV.RData")
+corr
+# save(corr, file="./output/correlation_BV.RData")
 
 # change of price over the years
 
@@ -246,36 +246,25 @@ mean_price <- temp %>%
   ggtitle("mean price for all crops")+
   geom_vline(xintercept = 2012, color="red")+
   geom_vline(xintercept = 2016, color="red")
-
-save(mean_price,file="./output/mean_price_crops_BV.RData")
+mean_price
+# save(mean_price,file="./output/mean_price_crops_BV.RData")
 
 # crop frequency throughout the years
 
 freq_crops_per_year <- function(year){
+  print(year)
   data %>% 
-    filter(Year == year) %>% 
+    filter(Year %in% year) %>% 
     as.data.table() %>% 
     ggplot() + 
-      geom_bar(mapping = aes(x = CType))+
-      ggtitle(paste("Most frequent crop type for", year))
+      geom_bar(mapping = aes(x = CType))
 }
-freq_crops_per_year(2005)
-freq_crops_per_year(2006)
-freq_crops_per_year(2007)
-freq_crops_per_year(2008)
-freq_crops_per_year(2009)
-freq_crops_per_year(2010)
-freq_crops_per_year(2011)
-freq_crops_per_year(2012)
-freq_crops_per_year(2013)
-freq_crops_per_year(2014)
-freq_crops_per_year(2015)
-freq_crops_per_year(2016)
-freq_crops_per_year(2017)
-freq_crops_per_year(2018)
-freq_crops_per_year(2019)
-ctype_by_year_plot <- freq_crops_per_year(2020)
-save(ctype_by_year_plot,file="./output/freq_plot_2020_BV.Rdata")
+freq_crops_per_year(c(2005))
+ctype_by_year_plot <- freq_crops_per_year(c(2018,2019,2020))
+# save(ctype_by_year_plot,file="./output/freq_plot_3year_BV.Rdata")
+
+
+
 data %>% 
   ggplot()+
   geom_bar(mapping=aes(x=CType))+
@@ -319,6 +308,18 @@ test(10)
 test(12)
 
 
+# price x freq ------------------------------------------------------------------------------------------
 
+dat <- as.data.frame(table(data$price))
+colnames(dat) <- c("price", "freq")
 
+ggplot(data=dat)+
+  geom_point(mapping=aes(x=price,y=freq))
 
+dat<-as.data.frame(table(data$price, data$CType))
+colnames(dat)<-c("price","ctype","freq")
+dat %>% 
+  filter(freq>0) %>% 
+  ggplot(mapping=aes(x=price,y=freq, color=ctype))+
+    geom_point()#+
+    scale_x_continuous(breaks = scales::breaks_extended())
