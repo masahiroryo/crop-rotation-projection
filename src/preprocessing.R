@@ -11,7 +11,7 @@ set.seed(seed = sd)
 # read ref data -------------------------------------------------------------------------------
 t1 <- Sys.time()
 
-source("./src/read_data.R")
+source("./src/preprocessing/read_data.R")
 data <- read_data(exclude_grass=FALSE, exclude_crops=TRUE, include_price=FALSE)
 
 file_name <- "./data/clean/data.csv"

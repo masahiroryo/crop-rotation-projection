@@ -1,6 +1,6 @@
-source("./src/read_crop.R")
-source("./src/read_soil.R")
-source("./src/read_climate.R")
+source("./src/preprocessing/read_crop.R")
+source("./src/preprocessing/read_soil.R")
+source("./src/preprocessing/read_climate.R")
 # source("./src/samples/read_price.R")
 
 read_data <- function(n=4223142, exclude_grass=FALSE, exclude_crops=FALSE,include_price=FALSE) {
