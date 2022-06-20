@@ -1,3 +1,11 @@
+############################################################
+# current version doesn't work
+#
+# TODO: revamp this. 
+# save models as .rdata 
+# load in here and compare results
+############################################################
+
 # load packages -------------------------------------------------------------------------------
 
 library(data.table)
@@ -9,7 +17,7 @@ library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
 
-split_data <- function(dataset,testyear = 3) {
+split_data <- function(dataset,testyear = 1) {
   years = sort(unique(dataset$Year))
   tail <- years[c((length(years)-testyear+1):length(years))]
   head <- years[1:(length(years)-testyear)]
@@ -22,8 +30,8 @@ split_data <- function(dataset,testyear = 3) {
   return(list(train, test))
 }
 
-build_model <- function(model_name, n, t=1) {
-  file_name <- paste("./data/clean/samples/", model_name, "_", n, ".csv", sep="")
+build_model <- function(model_name) {
+  file_name <- paste("./data/clean/", model_name, ".csv", sep="")
   data <- dtplyr::fread(file_name, sep = ",", header = TRUE)
   
   data$State <- as.factor(data$State)
@@ -71,5 +79,5 @@ build_model <- function(model_name, n, t=1) {
   return(hmap)
 }
 
-(build_model("vanilla", 2000000))
-(build_model("rm_noinfo", 2000000))
+(build_model("data_vanilla"))
+(build_model("data_no_lowvalue_crops"))

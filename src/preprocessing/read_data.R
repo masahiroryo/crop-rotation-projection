@@ -73,5 +73,15 @@ read_data <- function(n=4223142, exclude_grass=FALSE, exclude_crops=FALSE,includ
     ) %>% 
     as.data.table()
   
+  data$State <- as.factor(data$State)
+  data$X <- as.numeric(data$X)
+  data$Y <- as.numeric(data$Y)
+  data$Year <- as.integer(data$Year)
+  data$CType <- as.factor(data$CType)
+  data$PCType <- as.factor(data$PCType)
+  data$PPCType <- as.factor(data$PPCType)
+  data$SType <- as.factor(data$SType)
+  data$SElev <- as.numeric(data$SElev)
+  
   return(data)
 }

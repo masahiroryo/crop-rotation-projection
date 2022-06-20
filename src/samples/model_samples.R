@@ -1,3 +1,11 @@
+############################################################
+# current version doesn't work
+#
+# TODO: revamp this. 
+# save models as .rdata 
+# load in another file and compare results
+############################################################
+
 # load packages -------------------------------------------------------------------------------
 
 library(data.table)

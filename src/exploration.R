@@ -9,7 +9,7 @@ library(tidyverse)
 # p_state <- "BV"
 # test_years <- 3
 
-file_name <- "./data/clean/data.csv"
+file_name <- "./data/clean/data_no_lowvalue_crops.csv"
 data <- fread(file_name, sep=",", header=TRUE)
 
 # summary statistics --------------------------------------------------------------------------
