@@ -27,8 +27,8 @@ data <- inner_join(data_ref, data_soil_raw,by = c("OBJECTID", "x_coord", "y_coor
 rm(data_soil_raw)
 gc()
 print("finished soil data")
-# read temperature data -----------------------------------------------------------------------
 
+# read temperature data -----------------------------------------------------------------------
 print("starting temperature data")
 data_temp_raw <- fread("./data/simulated/temp.csv", sep=",", header = T)
 temp <- data.frame("cell_id"=data_temp_raw$cell_id)
@@ -83,7 +83,6 @@ gc()
 
 
 # read precipitation data -----------------------------------------------------------------------
-
 print("starting precipitation data")
 data_prec_raw <- fread("./data/simulated/prec.csv", sep=",", header = T)
 prec <- data.frame("cell_id"=data_prec_raw$cell_id)
@@ -139,7 +138,6 @@ gc()
 print("finished precipitation data")
 
 # read radiation data -------------------------------------------------------------------------
-
 print("starting radiation data")
 data_rad_raw <- fread("./data/simulated/rad.csv", sep=",", header = T)
 rad <- data.frame("cell_id"=data_rad_raw$cell_id)
@@ -202,19 +200,9 @@ data$Year <- as.integer(data$Year)
 
 # crop data ---------------------------------------------------------------------------------------------
 
-file_name <- "./data/clean/data_no-info-crops_price.csv"
+file_name <- "./data/clean/data_no_lowvalue_crops.csv"
 
 dat <- fread(file_name, sep=",", header=TRUE)
-
-dat$State <- as.factor(dat$State)
-dat$X <- as.numeric(dat$X)
-dat$Y <- as.numeric(dat$Y)
-dat$Year <- as.integer(dat$Year)
-dat$CType <- as.factor(dat$CType)
-dat$PCType <- as.factor(dat$PCType)
-dat$PPCType <- as.factor(dat$PPCType)
-dat$SType <- as.factor(dat$SType)
-dat$SElev <- as.numeric(dat$SElev)
 
 dat <- dat %>%
   drop_na() %>%
@@ -273,5 +261,3 @@ data$CType <- NA
 table(data$Year)
 
 save(data, file="./output/sim_dat.RData")
- 
-data <- lol
