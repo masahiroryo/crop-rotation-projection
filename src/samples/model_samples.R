@@ -1,11 +1,3 @@
-############################################################
-# current version doesn't work
-#
-# TODO: revamp this. 
-# save models as .rdata 
-# load in another file and compare results
-############################################################
-
 # load packages -------------------------------------------------------------------------------
 
 library(data.table)
@@ -31,18 +23,8 @@ split_data <- function(dataset,testyear = 3) {
 }
 
 build_model <- function(n, t=1) {
-  file_name <- paste("./data/clean/samples/vanilla_",n,".csv",sep="")
+  file_name <- paste("./data/samples/sample_data_",n,".csv",sep="")
   data <- fread(file_name, sep=",", header=TRUE)
-  
-  data$State <- as.factor(data$State)
-  data$X <- as.numeric(data$X)
-  data$Y <- as.numeric(data$Y)
-  data$Year <- as.integer(data$Year)
-  data$CType <- as.factor(data$CType)
-  data$PCType <- as.factor(data$PCType)
-  data$PPCType <- as.factor(data$PPCType)
-  data$SType <- as.factor(data$SType)
-  data$SElev <- as.numeric(data$SElev)
   
   data <- data %>%
     drop_na() %>%
@@ -74,7 +56,7 @@ build_model <- function(n, t=1) {
   return(res$overall[1])
 }
 
-samples = c(500,1000,5000,10000,50000,75000,100000,125000,250000,375000,500000,625000,750000,875000,1000000, 1125000, 1250000, 1375000, 1500000)
+samples =  seq(25000,2000000,25000)
 sd=1
 set.seed(seed = sd)
 
