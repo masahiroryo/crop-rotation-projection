@@ -1,11 +1,3 @@
-############################################################
-# current version doesn't work
-#
-# TODO: revamp this. 
-# save models as .rdata 
-# load in here and compare results
-############################################################
-
 # load packages -------------------------------------------------------------------------------
 
 library(data.table)
@@ -34,16 +26,6 @@ build_model <- function(model_name) {
   file_name <- paste("./data/clean/", model_name, ".csv", sep="")
   data <- dtplyr::fread(file_name, sep = ",", header = TRUE)
   
-  data$State <- as.factor(data$State)
-  data$X <- as.numeric(data$X)
-  data$Y <- as.numeric(data$Y)
-  data$Year <- as.integer(data$Year)
-  data$CType <- as.factor(data$CType)
-  data$PCType <- as.factor(data$PCType)
-  data$PPCType <- as.factor(data$PPCType)
-  data$SType <- as.factor(data$SType)
-  data$SElev <- as.numeric(data$SElev)
-  
   data <- data %>%
     drop_na() %>%
     select(-OBJECTID) %>%
@@ -70,14 +52,28 @@ build_model <- function(model_name) {
   
   confusion_matrix <- confusionMatrix(pred$predictions ,test_data$CType)
   (x <- confusion_matrix$table %>% confusionMatrix())
-  print(x)
   hmap <- as.data.frame(x$table) %>%
     ggplot(aes(Prediction,Reference, fill=Freq))+
     scale_fill_gradient(low = "white", high = "red")+
     geom_tile()+
     coord_fixed()
-  return(hmap)
+  hmap
+  
+  pred_train <- predict(res, data = train_data)
+  cm <- confusionMatrix(pred_train$predictions ,train_data$CType)
+  (x_train <-cm$table %>% confusionMatrix())
+  hmap_train <- as.data.frame(x_train$table) %>%
+    ggplot(aes(Prediction,Reference, fill=Freq))+
+    scale_fill_gradient(low = "white", high = "red")+
+    geom_tile()+
+    coord_fixed()
+  hmap_train
+  
+  results <- list(x, x_train, hmap, hmap_train)
+  
+  return(results)
 }
 
-(build_model("data_vanilla"))
-(build_model("data_no_lowvalue_crops"))
+model1 <- build_model("data_vanilla")
+model2 <- build_model("data_no_grass")
+model3 <- build_model("data_no_lowvalue_crops")
