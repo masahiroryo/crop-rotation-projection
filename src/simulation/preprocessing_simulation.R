@@ -5,7 +5,7 @@ library(tidyverse)
 library(reshape2)
 
 ###########
-no_years <- 5
+no_years <- 50 # max 79
 ###########
 
 data_ref <- fread("./data/orig/ref.csv", sep = ",", header = TRUE) %>% 
@@ -229,10 +229,12 @@ rm(split, dat, train_data)
 gc()
 
 # combine -----------------------------------------------------------------------------------------------
+temp <- sample_n(test_data, 10000) %>% as.data.table()
 
-dat <- test_data %>% 
+dat <- temp %>% 
   select(OBJECTID, CType, PCType, Year) %>% 
   as.data.table()
+
 
 dat$Year <- dat$Year+1
 
@@ -245,7 +247,6 @@ data <- data %>%
 
 table(data$Year)
 
-
 data <- left_join(data, dat, by = c("OBJECTID", "Year")) %>% 
   rename(PPCType = PCType,
          PCType = CType,
@@ -256,8 +257,13 @@ data <- left_join(data, dat, by = c("OBJECTID", "Year")) %>%
   distinct(OBJECTID, .keep_all = TRUE) %>%
   as.data.table()
 
+data$CType <- as.factor(data$CType)
+data$PCType <- as.factor(data$PCType)
+data$PPCType <- as.factor(data$PPCType)
+
 data$CType <- NA
+data$CType <- as.character(data$CType)
 
 table(data$Year)
 
-save(data, file="./output/sim_dat.RData")
+save(data, file="./output/sim_dat_small.RData")

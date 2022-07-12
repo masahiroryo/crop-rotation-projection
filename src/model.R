@@ -10,15 +10,22 @@ library(tidymodels)
 # read data -----------------------------------------------------------------------------------
 test_years <- 1
 
-file_name <- "./data/clean/data_no_lowvalue_crops.csv"
+file_name <- "./data/clean/data_vanilla.csv"
+# file_name <- "./data/clean/data_low_grass.csv"
+# file_name <- "./data/clean/data_no_lowvalue_crops.csv"
+# file_name <- "./data/clean/data.csv"
+
 data <- fread(file_name, sep=",", header=TRUE)
+
+data$CType <- as.factor(data$CType)
+data$PCType <- as.factor(data$PCType)
+data$PPCType <- as.factor(data$PPCType)
 
 set.seed(1)
 
 data <- data %>%
   drop_na() %>%
   select(-c(OBJECTID)) %>%
-  # select(-c(pprice, lyprice, deltaPrice)) %>% 
   as.data.table()
 
 # split data ----------------------------------------------------------------------------------
@@ -52,10 +59,11 @@ gc()
 
 # model ---------------------------------------------------------------------------------------
 
+
 t1 <- Sys.time()
-res <- ranger(CType ~ ., data = data,
+res <- ranger(CType ~ ., data = train_data,
               importance="impurity",
-              mtry = floor(ncol(data)/3),
+              mtry = floor(ncol(train_data)/3),
               num.trees=100,
               oob.error = TRUE,
               probability = FALSE,
@@ -64,6 +72,8 @@ t2 <- Sys.time()
 
 print(t2-t1)
 gc()
+
+save(res, file="./output/model_final.RData")
 
 # evaluate ----------------------------------------------------------------------------------------------
 

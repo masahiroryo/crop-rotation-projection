@@ -29,7 +29,7 @@ read_price <- function() {
 }
 
 read_previous_crop_price <- function(dat,data_price) {
-  res <- parSapply(cl, 1:nrow(dat), function(i) {
+  res <- sapply(1:nrow(dat), function(i) {
     id <- dat[i,]$PCType
     year <- dat[i,]$Year
     return(as.numeric(data_price[which(data_price$ID==id), ..year]))
@@ -38,7 +38,7 @@ read_previous_crop_price <- function(dat,data_price) {
 }
 
 read_previous_year_price <- function(dat,data_price) {
-  res <- parSapply(cl, 1:nrow(dat), function(i) {
+  res <- sapply(1:nrow(dat), function(i) {
     id <- dat[i,]$PCType
     y <- as.numeric(dat[i,]$Year)
     year <- ifelse(y>2005, as.character(y-1), NA)
@@ -51,7 +51,7 @@ read_previous_year_price <- function(dat,data_price) {
 }
 
 read_price_diff <- function(dat,data_price) {
-  res <- parSapply(cl, 1:nrow(dat), function(i) {
+  res <- sapply(1:nrow(dat), function(i) {
     id <- dat[i,]$PCType
     y <- as.numeric(dat[i,]$Year)
     year <- ifelse(y>2005, as.character(y-1), NA)
@@ -65,3 +65,6 @@ read_price_diff <- function(dat,data_price) {
   return(res)
 }
 
+sapply(c(1:5), function(i) {
+  print(i)
+} )

@@ -31,6 +31,10 @@ build_model <- function(n, t=1) {
     select(-OBJECTID) %>%
     as.data.table()
   
+  data$CType <- as.factor(data$CType)
+  data$PCType <- as.factor(data$PCType)
+  data$PPCType <- as.factor(data$PPCType)
+  
   split <- split_data(data,t)
   
   train_data <- split[[1]]
@@ -56,7 +60,9 @@ build_model <- function(n, t=1) {
   return(res$overall[1])
 }
 
-samples =  seq(25000,2000000,25000)
+# samples =  seq(10000,1000000,25000)
+samples = c(100, 1000, 10000, 100000, 1000000, 2000000)
+
 sd=1
 set.seed(seed = sd)
 
@@ -67,9 +73,17 @@ for (n in samples) {
   print(paste(i, "out of",length(samples)))
   print(paste("building model for", n, "samples"))
   results[i] <- build_model(n,1)
+  gc()
 }
 
 data <- data.frame(samples=samples, results=unlist(results))
+save(data,file="./output/sample_models_low.RData")
+
+# load(file="./output/sample_models_low.RData")
+
 data %>% 
   ggplot()+
-  geom_line(aes(x=samples, y=results))
+  geom_line(aes(x=samples, y=results))+
+  geom_point(aes(y=results, x=samples))+
+  ylim(0, 1) +
+  scale_x_continuous(trans='log10')

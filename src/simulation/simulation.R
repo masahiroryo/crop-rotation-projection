@@ -58,7 +58,7 @@ simulate_data <- function(file) {
   write.csv(sim_dat, save_name, row.names = FALSE)
 }
 
-simluate_data("temp")
+simulate_data("temp")
 simulate_data("prec")
 simulate_data("rad")
 

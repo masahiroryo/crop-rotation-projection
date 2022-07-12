@@ -23,15 +23,19 @@ split_data <- function(dataset,testyear = 1) {
 }
 
 build_model <- function(model_name) {
+  gc()
   file_name <- paste("./data/clean/", model_name, ".csv", sep="")
-  data <- dtplyr::fread(file_name, sep = ",", header = TRUE)
+  data <- fread(file_name, sep = ",", header = TRUE)
   
   data <- data %>%
     drop_na() %>%
     select(-OBJECTID) %>%
     as.data.table()
+  data$CType <- as.factor(data$CType)
+  data$PCType <- as.factor(data$PCType)
+  data$PPCType <- as.factor(data$PPCType)
   
-  split <- split_data(data,t)
+  split <- split_data(data)
   
   train_data <- split[[1]]
   test_data <- split[[2]]
@@ -75,5 +79,10 @@ build_model <- function(model_name) {
 }
 
 model1 <- build_model("data_vanilla")
-model2 <- build_model("data_no_grass")
+save(model1, file="./output/model_vanilla.RData")
+model2 <- build_model("data_low_grass")
+save(model2, file="./output/model_low_grass.RData")
 model3 <- build_model("data_no_lowvalue_crops")
+save(model3, file="./output/model_no_lowvalue_crops.RData")
+model4 <- build_model("data_no_lowvalue_crops_with_price")
+save(model4, file="./output/model_no_lowvalue_crops_with_price.RData")
