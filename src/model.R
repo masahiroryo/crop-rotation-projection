@@ -10,10 +10,10 @@ library(tidymodels)
 # read data -----------------------------------------------------------------------------------
 test_years <- 1
 
-file_name <- "./data/clean/data_vanilla.csv"
-# file_name <- "./data/clean/data_low_grass.csv"
-# file_name <- "./data/clean/data_no_lowvalue_crops.csv"
-# file_name <- "./data/clean/data.csv"
+# file_name <- "./data/clean/set1.csv"
+# file_name <- "./data/clean/set2.csv"
+file_name <- "./data/clean/set3.csv"
+# file_name <- "./data/clean/set4.csv"
 
 data <- fread(file_name, sep=",", header=TRUE)
 
@@ -73,9 +73,12 @@ t2 <- Sys.time()
 print(t2-t1)
 gc()
 
-save(res, file="./output/model_final.RData")
+save(res, file="./output/model3_res.RData")
 
 # evaluate ----------------------------------------------------------------------------------------------
+theme_set(theme_bw())
+primary_color = '#4477AA'
+secondary_color = '#228833'
 
 pred <- predict(res, data = test_data)
 
@@ -83,7 +86,7 @@ confusion_matrix <- confusionMatrix(pred$predictions ,test_data$CType)
 (x <- confusion_matrix$table %>% confusionMatrix())
 hmap <- as.data.frame(x$table) %>%
   ggplot(aes(Prediction,Reference, fill=Freq))+
-  scale_fill_gradient(low = "white", high = "red")+
+  scale_fill_gradient(low = "black", high = secondary_color)+
   geom_tile()+
   coord_fixed()
 hmap
@@ -93,21 +96,33 @@ cm <- confusionMatrix(pred_train$predictions ,train_data$CType)
 (x_train <-cm$table %>% confusionMatrix())
 hmap_train <- as.data.frame(x_train$table) %>%
   ggplot(aes(Prediction,Reference, fill=Freq))+
-  scale_fill_gradient(low = "white", high = "red")+
+  scale_fill_gradient(low = "white", high = secondary_color)+
   geom_tile()+
   coord_fixed()
 hmap_train
 
-plot(res$predictions, las = 2, main="Number of predictions per Class")
+var_importance <- as.data.frame(res$variable.importance)
+var_importance$ct <- rownames(var_importance)
+colnames(var_importance) <- c("vi", "ct")
+var_importance <- var_importance %>% 
+  arrange(desc(vi))
 
-var_importance <- res$variable.importance
-barplot(var_importance[order(var_importance, decreasing = TRUE)], las = 2, main="Variable importance")
+var_imp <- ggplot(var_importance) + 
+  geom_col(mapping = aes(y=vi, x = ct ), fill=primary_color)+
+  labs(x="", y="", title="Variable Importance")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))+
+  scale_x_discrete(limits=var_importance$ct)
+var_imp
 
 class_accuracy <- data.frame(pred$predictions, test_data$CType) %>%
   group_by(pred.predictions) %>%
   summarize(acc = mean(pred.predictions == test_data.CType)) %>%
   arrange(pred.predictions)
 
-ggplot(data=class_accuracy, aes(x=pred.predictions, y=acc)) +
-  geom_bar(stat="identity")+
-  ggtitle("Accuracy for each class")
+classacc <- ggplot(data=class_accuracy) +
+  geom_bar(mapping = aes(x=pred.predictions, y=acc), fill = primary_color, stat = "identity")+
+  labs(x="Crop Type", y="Accurracy", title="Accurracy for each Class")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))
+classacc

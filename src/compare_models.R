@@ -73,16 +73,113 @@ build_model <- function(model_name) {
     coord_fixed()
   hmap_train
   
-  results <- list(x, x_train, hmap, hmap_train)
+  class_accuracy <- data.frame(pred$predictions, test_data$CType) %>%
+    group_by(pred.predictions) %>%
+    summarize(acc = mean(pred.predictions == test_data.CType)) %>%
+    arrange(pred.predictions)
+  
+  var_importance <- as.data.frame(res$variable.importance)
+  var_importance$ct <- rownames(var_importance)
+  colnames(var_importance) <- c("vi", "ct")
+  var_importance <- var_importance %>% 
+    arrange(vi)
+  
+  results <- list(x, x_train, hmap, hmap_train, class_accuracy, var_importance)
   
   return(results)
 }
 
-model1 <- build_model("data_vanilla")
-save(model1, file="./output/model_vanilla.RData")
-model2 <- build_model("data_low_grass")
-save(model2, file="./output/model_low_grass.RData")
-model3 <- build_model("data_no_lowvalue_crops")
-save(model3, file="./output/model_no_lowvalue_crops.RData")
-model4 <- build_model("data_no_lowvalue_crops_with_price")
-save(model4, file="./output/model_no_lowvalue_crops_with_price.RData")
+model1 <- build_model("set1")
+save(model1, file="./output/model1.RData")
+model2 <- build_model("set2")
+save(model2, file="./output/model2.RData")
+model3 <- build_model("set3")
+save(model3, file="./output/model3.RData")
+model4 <- build_model("set4")
+save(model4, file="./output/model4.RData")
+
+# viz 
+theme_set(theme_bw())
+primary_color = '#4477AA'
+secondary_color = '#228833'
+
+load(file="./output/model1.RData")
+classacc <- ggplot(data=model1[[5]]) +
+  geom_bar(mapping = aes(x=pred.predictions, y=acc), fill = primary_color, stat = "identity")+
+  labs(x="Crop Type", y="Accurracy", title="Accurracy for each Class")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))
+
+png(filename="./output/class_accuracy_model1.png")
+plot(classacc)
+dev.off()
+
+png(filename="./output/heatmap_model1.png")
+plot(hmap)
+dev.off()
+
+var_imp <- ggplot(model1[6]) + 
+  geom_bar(mapping = aes(x = ct, y=vi), fill=primary_color, stat="identity")+
+  labs(x="", y="", title="Variable Importance")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))+
+  scale_x_discrete(limits=var_importance$ct)
+png(filename="./output/variable_importance_model1.png")
+plot(var_imp)
+dev.off()
+
+
+
+load(file="./output/model2.RData")
+classacc <- ggplot(data=model2[[5]]) +
+  geom_bar(mapping = aes(x=pred.predictions, y=acc), fill = primary_color, stat = "identity")+
+  labs(x="Crop Type", y="Accurracy", title="Accurracy for each Class")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))
+
+png(filename="./output/class_accuracy_model2.png")
+plot(classacc)
+dev.off()
+
+
+
+
+load(file="./output/model3.RData")
+classacc <- ggplot(data=model3[[5]]) +
+  geom_bar(mapping = aes(x=pred.predictions, y=acc), fill = primary_color, stat = "identity")+
+  labs(x="Crop Type", y="Accurracy", title="Accurracy for each Class")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))
+
+png(filename="./output/class_accuracy_model3.png")
+plot(classacc)
+dev.off()
+
+
+
+
+load(file="./output/model4.RData")
+classacc <- ggplot(data=model4[[5]]) +
+  geom_bar(mapping = aes(x=pred.predictions, y=acc), fill = primary_color, stat = "identity")+
+  labs(x="Crop Type", y="Accurracy", title="Accurracy for each Class")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))
+
+png(filename="./output/class_accuracy_model4.png")
+plot(classacc)
+dev.off()
+
+png(filename="./output/heatmap_model4.png")
+plot(hmap)
+dev.off()
+
+var_imp <- ggplot(model4[6]) + 
+  geom_bar(mapping = aes(x = ct, y=vi), fill=primary_color, stat="identity")+
+  labs(x="", y="", title="Variable Importance")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))+
+  scale_x_discrete(limits=var_importance$ct)
+
+png(filename="./output/variable_importance_model4.png")
+plot(var_imp)
+dev.off()

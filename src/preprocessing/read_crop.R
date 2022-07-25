@@ -39,12 +39,12 @@ read_crop <- function(data_ref, exclude_grass=FALSE, exclude_crops=FALSE) {
   if (exclude_grass) {
     data_crop <- data_crop %>% 
       group_by(OBJECTID) %>% 
-      filter(all(CType==18)) %>% 
+      filter(!all(CType==18)) %>% 
       as.data.table()
   }
   if(exclude_crops) {
     data_crop <- data_crop %>% 
-      filter(!(CType %in% c(0,18,19,70,80))) %>%
+      filter(!(CType %in% c(0,19,70,80))) %>%
       as.data.table()
   }
   

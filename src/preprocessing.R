@@ -8,31 +8,31 @@ set.seed(seed = sd)
 
 source("./src/preprocessing/read_data.R")
 
-preprocess_vanilla <- function() { 
+preprocess_set1 <- function() { 
   data <- read_data(n=2111571,exclude_grass=FALSE, exclude_crops=FALSE, include_price=FALSE)
-  file_name <- "./data/clean/data_vanilla.csv"
+  file_name <- "./data/clean/set1.csv"
   write.csv(data, file=file_name, row.names = FALSE)
 }
 
-preprocess_low_grass <- function() { 
+preprocess_set2 <- function() { 
   data <- read_data(exclude_grass=TRUE, exclude_crops=FALSE, include_price=FALSE)
-  file_name <- "./data/clean/data_low_grass.csv"
+  file_name <- "./data/clean/set2.csv"
   write.csv(data, file=file_name, row.names = FALSE)
 }
 
-preprocess_no_lowvalue_crops <- function() { 
-  data <- read_data(exclude_grass=FALSE, exclude_crops=TRUE, include_price=FALSE)
-  file_name <- "./data/clean/data_no_lowvalue_crops.csv"
+preprocess_set3 <- function() { 
+  data <- read_data(exclude_grass=TRUE, exclude_crops=TRUE, include_price=FALSE)
+  file_name <- "./data/clean/set3.csv"
   write.csv(data, file=file_name, row.names = FALSE)
 }
 
-preprocess_no_lowvalue_crops_with_price <- function() {
+preprocess_set4 <- function() {
   data <- read_data(exclude_grass=FALSE, exclude_crops=TRUE, include_price=TRUE)
-  file_name <- "./data/clean/data.csv"
+  file_name <- "./data/clean/set4.csv"
   write.csv(data, file=file_name, row.names = FALSE)
 }
 
-# preprocess_vanilla()
-# preprocess_low_grass()
-# preprocess_no_lowvalue_crops()
-# preprocess_no_lowvalue_crops_with_price()
+preprocess_set1()
+preprocess_set2()
+preprocess_set3()
+preprocess_set4()

@@ -4,23 +4,34 @@ library(data.table)
 library(dtplyr)
 library(tidyverse)
 
+theme_set(theme_bw())
+primary_color = '#4477AA'
+secondary_color = '#228833'
 # read data -----------------------------------------------------------------------------------
 
 # p_state <- "BV"
 # test_years <- 3
 
-file_name <- "./data/clean/data_vanilla.csv"
-# file_name <- "./data/clean/data_low_grass.csv"
-# file_name <- "./data/clean/data_no_lowvalue_crops.csv"
-# file_name <- "./data/clean/data.csv"
+# file_name <- "./data/clean/set1.csv"
+# file_name <- "./data/clean/set2.csv"
+file_name <- "./data/clean/set3.csv"
+# file_name <- "./data/clean/set4.csv"
 
 data <- fread(file_name, sep=",", header=TRUE)
 
 # summary statistics --------------------------------------------------------------------------
 
 # frequency of each crop type
-ggplot(data) + 
-  geom_bar(mapping = aes(x = CType))
+data$CType <- as.factor(data$CType)
+freq_plot <- ggplot(data) + 
+  geom_bar(mapping = aes(x = CType), fill=primary_color)+
+  labs(x="Crop Type", y="Frequency", title="Frequence of each crop type")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14))
+freq_plot
+png(filename="./output/crop_frequency_set3.png")
+plot(freq_plot)
+dev.off()
 
 # frequency of each crop type for specific year
 freq_crops_per_year <- function(year){
@@ -35,16 +46,40 @@ freq_crops_per_year(2005)
 freq_crops_per_year(2020)
 
 # map with most frequent crop type for specific year
+
+data_small <- data %>% 
+  sample_n(500000) %>% 
+  as.data.table()
+
 plot_crops_per_year <- function(year){
-  dat <- data %>% 
+  dat <- data_small %>% 
     filter(Year == year) %>% 
     as.data.table()
   
   ggplot(data = dat) + 
-    geom_point(mapping = aes(x = X, y = Y, color=factor(CType)), position = "jitter", stroke = 0.1)
+    geom_point(mapping = aes(x = X, y = Y), position = "jitter", stroke = 0.1)+
+    coord_cartesian(xlim = c(4065000,4650000), ylim= c(2720000, 3600000))
 }
-plot_crops_per_year(2005)
 plot_crops_per_year(2020)
+plot_crops_per_year(2020)
+# , color=factor(CType)
+
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(terra)
+points <- cbind(data_small$X, data_small$Y)
+v <- vect(points, crs="+proj=utm +zone=10 +datum=WGS84  +units=m")
+v
+y <- project(v, "+proj=longlat +datum=WGS84")
+y
+lonlat <- as.data.frame(geom(y)[, c("x", "y")])
+head(lonlat, 3)
+
+germany <- ne_countries(scale="medium", returnclass="sf", country="germany")
+ggplot()+
+  geom_sf(data=lonlat)
+  geom_sf(data=germany)
 
 # summary statistics for environmental data
 summary(data$TempAVG)
