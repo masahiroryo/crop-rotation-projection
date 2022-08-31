@@ -91,12 +91,20 @@ build_model <- function(model_name) {
 
 model1 <- build_model("set1")
 save(model1, file="./output/model1.RData")
+rm(model1)
+gc()
 model2 <- build_model("set2")
 save(model2, file="./output/model2.RData")
+rm(model2)
+gc()
 model3 <- build_model("set3")
 save(model3, file="./output/model3.RData")
+rm(model3)
+gc()
 model4 <- build_model("set4")
 save(model4, file="./output/model4.RData")
+rm(model4)
+gc()
 
 # viz 
 theme_set(theme_bw())
@@ -115,18 +123,27 @@ plot(classacc)
 dev.off()
 
 png(filename="./output/heatmap_model1.png")
-plot(hmap)
+plot(model1[[3]])
 dev.off()
 
-var_imp <- ggplot(model1[6]) + 
+vip <- model1[[6]]
+vip <- vip %>% 
+  arrange(desc(vi))
+var_imp <- ggplot(vip) + 
   geom_bar(mapping = aes(x = ct, y=vi), fill=primary_color, stat="identity")+
   labs(x="", y="", title="Variable Importance")+
   theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
-                                  size = 14))+
-  scale_x_discrete(limits=var_importance$ct)
+                                  size = 14),
+        axis.text.x = element_text(angle = 50, vjust = 1, hjust = 1, size = 12))+
+  scale_x_discrete(limits=vip$ct)
 png(filename="./output/variable_importance_model1.png")
 plot(var_imp)
 dev.off()
+
+rm(model1)
+gc()
+
+
 
 
 
@@ -154,8 +171,24 @@ classacc <- ggplot(data=model3[[5]]) +
 png(filename="./output/class_accuracy_model3.png")
 plot(classacc)
 dev.off()
-
-
+png(filename="./output/heatmap_model3.png")
+plot(model3[[3]])
+dev.off()
+vip <- model3[[6]]
+vip <- vip %>% 
+  arrange(desc(vi))
+var_imp <- ggplot(vip) + 
+  geom_bar(mapping = aes(x = ct, y=vi), fill=primary_color, stat="identity")+
+  labs(x="", y="", title="Variable Importance")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
+                                  size = 14),
+        axis.text.x = element_text(angle = 50, vjust = 1, hjust = 1, size = 12))+
+  scale_x_discrete(limits=vip$ct)
+png(filename="./output/variable_importance_model3.png")
+plot(var_imp)
+dev.off()
+rm(model3)
+gc()
 
 
 load(file="./output/model4.RData")
@@ -170,16 +203,19 @@ plot(classacc)
 dev.off()
 
 png(filename="./output/heatmap_model4.png")
-plot(hmap)
+plot(model4[[3]])
 dev.off()
 
-var_imp <- ggplot(model4[6]) + 
+vip <- model4[[6]]
+vip <- vip %>% 
+  arrange(desc(vi))
+var_imp <- ggplot(vip) + 
   geom_bar(mapping = aes(x = ct, y=vi), fill=primary_color, stat="identity")+
   labs(x="", y="", title="Variable Importance")+
   theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
-                                  size = 14))+
-  scale_x_discrete(limits=var_importance$ct)
-
+                                  size = 14),
+        axis.text.x = element_text(angle = 50, vjust = 1, hjust = 1, size = 12))+
+  scale_x_discrete(limits=vip$ct)
 png(filename="./output/variable_importance_model4.png")
 plot(var_imp)
 dev.off()

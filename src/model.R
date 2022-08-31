@@ -8,13 +8,9 @@ library(caret)
 library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
-test_years <- 1
 
-# file_name <- "./data/clean/set1.csv"
-# file_name <- "./data/clean/set2.csv"
-file_name <- "./data/clean/set3.csv"
-# file_name <- "./data/clean/set4.csv"
-
+set <- "set2"
+file_name <- paste("./data/clean/", set, ".csv", sep="")
 data <- fread(file_name, sep=",", header=TRUE)
 
 data$CType <- as.factor(data$CType)
@@ -22,6 +18,7 @@ data$PCType <- as.factor(data$PCType)
 data$PPCType <- as.factor(data$PPCType)
 
 set.seed(1)
+test_years <- 1
 
 data <- data %>%
   drop_na() %>%
@@ -59,7 +56,6 @@ gc()
 
 # model ---------------------------------------------------------------------------------------
 
-
 t1 <- Sys.time()
 res <- ranger(CType ~ ., data = train_data,
               importance="impurity",
@@ -67,13 +63,18 @@ res <- ranger(CType ~ ., data = train_data,
               num.trees=100,
               oob.error = TRUE,
               probability = FALSE,
+              classification = TRUE
 )
 t2 <- Sys.time()
 
 print(t2-t1)
 gc()
 
-save(res, file="./output/model3_res.RData")
+set <- "set2"
+file_name <- paste("./data/clean/model_", set, ".RData", sep="")
+
+save(res, file=file_name)
+#load( file=file_name)
 
 # evaluate ----------------------------------------------------------------------------------------------
 theme_set(theme_bw())
@@ -126,3 +127,31 @@ classacc <- ggplot(data=class_accuracy) +
   theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
                                   size = 14))
 classacc
+
+bacc <- as.data.frame(x$byClass[,11])
+bacc$CType <- as.factor(c(1:18))
+colnames(bacc) <- c("balanced_accuracy", "CType")
+bacc <- bacc %>% 
+  drop_na()
+
+ggplot(data=bacc)+
+  geom_bar(mapping=aes(y=`balanced_accuracy`, x=`CType`), stat="identity")
+
+balanced_class_acc
+
+x$byClass
+
+byclassviz <- function(xx) {
+  df <- as.data.frame(xx)
+  df$CType <- as.factor(c(1:18))
+  colnames(df) <- c("x", "y")
+  df <- df %>% 
+    drop_na()
+  
+  ggplot(data=df)+
+    geom_bar(mapping=aes(y=`x`, x=`y`), stat="identity")
+}
+
+byclassviz(x$byClass[,5]) # precision
+byclassviz(x$byClass[,6]) # recall 
+byclassviz(x$byClass[,7]) # f1

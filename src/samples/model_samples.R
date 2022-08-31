@@ -60,7 +60,6 @@ build_model <- function(n, t=1) {
   return(res$overall[1])
 }
 
-# samples =  seq(10000,1000000,25000)
 samples = c(100, 1000, 10000, 100000, 1000000, 2000000)
 
 sd=1
@@ -79,11 +78,18 @@ for (n in samples) {
 data <- data.frame(samples=samples, results=unlist(results))
 save(data,file="./output/sample_models_low.RData")
 
-# load(file="./output/sample_models_low.RData")
+#load(file="./output/sample_models_low.RData")
 
+theme_set(theme_bw())
+primary_color = '#4477AA'
+secondary_color = '#228833'
+
+png(filename="./output/samples_acc.png")
 data %>% 
   ggplot()+
-  geom_line(aes(x=samples, y=results))+
-  geom_point(aes(y=results, x=samples))+
+  geom_line(aes(x=samples, y=results), color=primary_color, size=1)+
+  geom_point(aes(y=results, x=samples), color=primary_color)+
   ylim(0, 1) +
-  scale_x_continuous(trans='log10')
+  scale_x_continuous(trans='log10')+
+  labs(y="Accuracy", x="Sample Size", title="Accuracy based on sample size")
+dev.off()

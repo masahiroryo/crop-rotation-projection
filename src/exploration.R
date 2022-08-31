@@ -3,34 +3,41 @@
 library(data.table)
 library(dtplyr)
 library(tidyverse)
+library(ggsci)
+library(scales)
 
 theme_set(theme_bw())
 primary_color = '#4477AA'
 secondary_color = '#228833'
+
 # read data -----------------------------------------------------------------------------------
 
-# p_state <- "BV"
-# test_years <- 3
-
-# file_name <- "./data/clean/set1.csv"
-# file_name <- "./data/clean/set2.csv"
-file_name <- "./data/clean/set3.csv"
-# file_name <- "./data/clean/set4.csv"
-
+set <- "set2"
+file_name <- paste("./data/clean/", set, ".csv", sep="")
 data <- fread(file_name, sep=",", header=TRUE)
+
+classification <- read.csv("./data/orig/classification.csv",sep="\t")[,1:2]
 
 # summary statistics --------------------------------------------------------------------------
 
 # frequency of each crop type
 data$CType <- as.factor(data$CType)
+c <- vector("character", nrow(data))
+i<-1
+for (type in data$CType) {
+  c[i] = classification$Crop.Class.Name[classification$Crop.Class.ID==type]
+  i=i+1
+}
+data$CType.Name <- c
+
 freq_plot <- ggplot(data) + 
-  geom_bar(mapping = aes(x = CType), fill=primary_color)+
-  labs(x="Crop Type", y="Frequency", title="Frequence of each crop type")+
-  theme(plot.title = element_text(margin = margin(10, 0, 10, 0),
-                                  size = 14))
+  geom_bar(mapping = aes(x = CType.Name), fill=primary_color)+
+  labs(x="", y="Frequency", title="Frequence of each crop type")+
+  theme(plot.title = element_text(margin = margin(10, 0, 10, 0), size = 14),
+        axis.text.x = element_text(angle=45, hjust = 1))
+fname = paste("./output/crop_frequency_", set, ".png", sep="")
+png(filename=fname)
 freq_plot
-png(filename="./output/crop_frequency_set3.png")
-plot(freq_plot)
 dev.off()
 
 # frequency of each crop type for specific year
@@ -122,27 +129,28 @@ print(find_overvalued_crtypes(cr20))
 # clusterExport(cl, list("data", "data_price"))
 # clusterEvalQ(cl, { library(data.table) })
 
-dat <- data %>% 
+dat$CType <- as.numeric(dat$CType)
+data <- dat %>% 
   select(OBJECTID, Year, CType) %>% 
   arrange(OBJECTID) %>% 
   as.data.table()
 gc()
 
-crop_sequences <- dat %>% 
+crop_sequences <- data %>% 
   pivot_wider(names_from = Year, values_from=CType, values_fn = list(. = mean)) %>% 
   as.data.table()
 gc()
 
 crop_sequences <- as.data.frame(crop_sequences[,-1])
 
-get_frequences <- function(sequences) {
+get_frequences <- function(sequences, n) {
   start_time <- Sys.time()
-  s = lapply(1:nrow(crop_sequences), function(i) {
-    xx <- matrix(0, nrow = 17, ncol = 17)
-    colnames(xx) <- c(1:17)
-    for (j in 2:ncol(crop_sequences)) {
-      a = crop_sequences[i,j-1]
-      b = crop_sequences[i,j]
+  s = lapply(1:nrow(sequences), function(i) {
+    xx <- matrix(0, nrow = 20, ncol = 20)
+    colnames(xx) <- 1:20
+    for (j in 2:ncol(sequences)) {
+      a = sequences[i,j-1]
+      b = sequences[i,j]
       xx[a, b] = xx[a, b] + 1
     }
     return(xx)
@@ -158,15 +166,15 @@ n_largest <- function(m,n) {
   return(res)
 }
 get_most_frequent_sequences <- function(freq_mat, a) {
-  res <- lapply(1:a, function(x) which(freq_mat==n_largest(freq_mat,4)[x], arr.ind=TRUE))
+  res <- lapply(1:a, function(x) which(freq_mat==n_largest(freq_mat,a)[x], arr.ind=TRUE))
   for (l in 1:a) {
     print(res[[l]])
   }
   return(res)
 }
 
-freq_matrix <- get_frequences(crop_sequences)
-most_freq <- get_most_frequent_sequences(freq_matrix, 3)
+freq_matrix <- get_frequences(crop_sequences, length(unique(dat$CType)))
+most_freq <- get_most_frequent_sequences(freq_matrix, 5)
 
 # price and ctype ---------------------------------------------------------------------------------------
 
@@ -302,8 +310,6 @@ freq_crops_per_year(c(2005))
 ctype_by_year_plot <- freq_crops_per_year(c(2018,2019,2020))
 # save(ctype_by_year_plot,file="./output/freq_plot_3year_BV.Rdata")
 
-
-
 data %>% 
   ggplot()+
   geom_bar(mapping=aes(x=CType))+
@@ -362,3 +368,27 @@ dat %>%
   ggplot(mapping=aes(x=price,y=freq, color=ctype))+
     geom_point()#+
     scale_x_continuous(breaks = scales::breaks_extended())
+    
+
+# data diagnostics --------------------------------------------------------
+crops_of_interest <- c("Maize (silage)", "Grassland", "Legumes", "Spring Wheat, triticale and rye",
+                   "Winter barley", "Winter wheat", "Maize (grain)")
+    
+rel <- data %>%  
+  count(CType.Name, Year) %>%
+  group_by(Year) %>% 
+  mutate(freq = n / sum(n)) %>% 
+  ungroup() %>% 
+  select(-n) %>% 
+  filter(CType.Name %in% crops_of_interest) %>% 
+  #filter(CType %in% c(11:18)) %>% 
+  as.data.frame()
+
+    
+#png(filename="./output/freq_0520.png")
+ggplot(rel, aes(y=(freq*100),x=Year, color=CType.Name))+
+  labs(y="Relative Frequency", x="Year", title=paste("Relative Frequency for each Year"))+
+  geom_line(size=1)+
+  geom_point()+
+  scale_color_npg()
+#dev.off()

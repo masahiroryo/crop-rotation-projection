@@ -9,8 +9,9 @@ library(tidymodels)
 
 # read data -----------------------------------------------------------------------------------
 
-file_name <- "./data/clean/data.csv"
-data <- fread(file_name, sep = ",", header = TRUE)
+set <- "set2" # set1, set2 or set3
+file_name <- paste("./data/clean/", set, ".csv", sep="")
+data <- fread(file_name, sep=",", header=TRUE)
 
 # prepare data for model building -----------------------------------------
 

@@ -5,7 +5,6 @@ library(data.table)
 library(tidyverse)
 library(dtplyr)
 
-
 print("simulate data")
 # source("./src/simulation/simulation.R")
 print("done")
